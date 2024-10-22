@@ -12,32 +12,24 @@ import { FloatingParticles } from "@/components/floating-particles"
 import SpookyLoader from './spooky-loader'
 import dynamic from 'next/dynamic'
 import { useAudioContext } from '@/components/audio-provider'
+import { GameMechanics } from '@/lib/game-mechanics'
+import type { GameState, Choice, StoryResponse, Message } from '@/lib/types'
 
 const SearchParamsWrapper = dynamic(() => import('@/components/search-params-wrapper'), { ssr: false })
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-interface GameState {
-  hasWeapon: boolean;
-  hasKey: boolean;
-  tension: number;
-  encounterCount: number;
-}
-
-interface StoryResponse {
-  story: string;
-  choices: string[];
-  gameState: GameState;
-}
-
 const INITIAL_GAME_STATE: GameState = {
+  survivalScore: 100,
   hasWeapon: false,
   hasKey: false,
   tension: 0,
   encounterCount: 0,
+  stalkerPresence: 'distant',
+  statusEffects: [],
+  environmentalModifiers: {
+    darkness: 0,
+    noise: 0,
+    weather: 0
+  }
 };
 
 export function GameComponent() {
@@ -49,10 +41,11 @@ export function GameComponent() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isGameOver, setIsGameOver] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [actionOutcome, setActionOutcome] = useState<string | null>(null)
 
   useEffect(() => {
     const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px is the standard tablet breakpoint
+      setIsMobile(window.innerWidth < 768);
     };
     
     checkIsMobile();
@@ -75,30 +68,57 @@ export function GameComponent() {
   
       const data: StoryResponse = await response.json();
       
+      // Check game over conditions
+      const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
+      if (isOver) {
+        setIsGameOver(true);
+        if (ending === 'death') {
+          data.story = `${data.story}\n\nYour survival score reached zero. Game Over.`;
+        } else if (ending === 'caught') {
+          data.story = `${data.story}\n\nThe Stalker caught up with you. Game Over.`;
+        } else if (ending === 'victory') {
+          data.story = `${data.story}\n\nYou managed to escape! Victory!`;
+        }
+      }
+      
       setStorySegment(data);
       setGameState(data.gameState);
       setMessages(prevMessages => [...prevMessages, {
         role: 'assistant',
         content: JSON.stringify(data)
       }]);
-
-      // Check for game over conditions
-      const storyLower = data.story.toLowerCase();
-      if (storyLower.includes('game over') || 
-          storyLower.includes('you died') ||
-          storyLower.includes('you escaped') ||
-          storyLower.includes('you survived')) {
-        setIsGameOver(true);
-      }
     } catch (error) {
       console.error('Error fetching story segment:', error);
       setStorySegment({
         story: 'The Stalker draws near... Perhaps we should try a different path?',
-        choices: ['Run and hide', 'Look for another way', 'Face your fate'],
+        choices: [
+          {
+            text: 'Run and hide',
+            dc: 12,
+            riskFactor: -10,
+            rewardValue: 15,
+            type: 'stealth'
+          },
+          {
+            text: 'Look for another way',
+            dc: 10,
+            riskFactor: -5,
+            rewardValue: 10,
+            type: 'search'
+          },
+          {
+            text: 'Face your fate',
+            dc: 15,
+            riskFactor: -20,
+            rewardValue: 20,
+            type: 'combat'
+          }
+        ],
         gameState: INITIAL_GAME_STATE
       });
     } finally {
       setIsLoading(false);
+      setActionOutcome(null);
     }
   }, [gameState]);
 
@@ -106,6 +126,7 @@ export function GameComponent() {
     setGameState(INITIAL_GAME_STATE);
     setMessages([]);
     setIsGameOver(false);
+    setActionOutcome(null);
     const initialMessage: Message = { 
       role: 'user', 
       content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
@@ -113,15 +134,24 @@ export function GameComponent() {
     fetchStorySegment([initialMessage]);
   }, [fetchStorySegment]);
 
-  const handleChoice = useCallback(async (choice: string) => {
-    const userMessage: Message = { role: 'user', content: `I choose: ${choice}` }
-    const updatedMessages = [...messages, userMessage]
-    await fetchStorySegment(updatedMessages)
-  }, [messages, fetchStorySegment]);
+  const handleChoice = useCallback(async (choice: Choice) => {
+    // Resolve the action using game mechanics
+    const { success, newGameState, outcomeText } = GameMechanics.resolveAction(choice, gameState);
+    setActionOutcome(outcomeText);
+    setGameState(newGameState);
+
+    // Modify message based on success/failure
+    const userMessage: Message = { 
+      role: 'user', 
+      content: `I choose: ${choice.text}. ${success ? 'Successfully ' : 'Failed to '}${choice.text.toLowerCase()}. ${outcomeText}` 
+    };
+    const updatedMessages = [...messages, userMessage];
+    await fetchStorySegment(updatedMessages);
+  }, [messages, gameState, fetchStorySegment]);
 
   const renderGameOver = useCallback(() => {
-    const isVictory = storySegment?.story.toLowerCase().includes('you survived') || 
-                     storySegment?.story.toLowerCase().includes('you escaped');
+    const isVictory = storySegment?.story.toLowerCase().includes('victory') || 
+                     storySegment?.story.toLowerCase().includes('escaped');
     
     return (
       <motion.div
@@ -174,7 +204,6 @@ export function GameComponent() {
     }
   }, [handleSearchParams, fetchStorySegment]);
 
-  // Handle viewport height for mobile browsers
   useEffect(() => {
     const updateViewportHeight = () => {
       const vh = window.innerHeight * 0.01;
@@ -202,13 +231,23 @@ export function GameComponent() {
         className="flex flex-col h-full"
       >
         <CardContent className={`flex flex-col ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} p-4 overflow-hidden`}>
-          {gameState.hasWeapon && (
-            <div className="text-orange-400 text-sm text-center pb-2 border-b border-orange-800/20">
-              You are armed
-            </div>
-          )}
+          {/* Status Effects Banner */}
+          <div className="text-orange-400 text-sm text-center pb-2 border-b border-orange-800/20 space-y-1">
+            {gameState.survivalScore <= 50 && (
+              <div className="text-red-500 font-bold">CRITICAL CONDITION!</div>
+            )}
+            {gameState.hasWeapon && <div>You are armed</div>}
+            {gameState.hasKey && <div>You have found a key</div>}
+            {gameState.statusEffects.length > 0 && (
+              <div>{gameState.statusEffects.join(', ')}</div>
+            )}
+            {actionOutcome && (
+              <div className={actionOutcome.includes('Success') ? 'text-green-500' : 'text-red-500'}>
+                {actionOutcome}
+              </div>
+            )}
+          </div>
           
-          {/* Scrollable story area */}
           <ScrollArea className={`
             flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-orange-800/50
             ${isMobile ? 'h-[45vh]' : 'max-h-[60vh]'}
@@ -222,7 +261,6 @@ export function GameComponent() {
             )}
           </ScrollArea>
 
-          {/* Action buttons container */}
           {!isLoading && storySegment && (
             <div className={`
               flex flex-col gap-4 
@@ -233,11 +271,11 @@ export function GameComponent() {
                   <Button
                     key={index}
                     onClick={() => handleChoice(choice)}
-                    className="w-full bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out flex items-center justify-center min-h-[4rem]"
+                    className="w-full bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out flex flex-col items-center justify-center min-h-[4rem]"
                     disabled={isLoading}
                   >
                     <span className="text-base sm:text-lg font-medium leading-tight break-words choice-text text-center">
-                      {choice}
+                      {choice.text}
                     </span>
                   </Button>
                 ))
@@ -256,7 +294,6 @@ export function GameComponent() {
     >
       <FloatingParticles />
       
-      {/* Header with controls */}
       <div className="w-full px-4 py-2 flex justify-between items-center bg-black/50 backdrop-blur-sm z-20 border-b border-orange-800/30">
         <Sheet>
           <SheetTrigger asChild>
@@ -272,11 +309,14 @@ export function GameComponent() {
           <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/90 border-orange-800">
             <SheetTitle className="text-lg font-semibold text-orange-400 mb-4">Game Status</SheetTitle>
             <div className="space-y-4 text-orange-200">
+              <div>Survival Score: {gameState.survivalScore}/100</div>
+              <div>Stalker Presence: {gameState.stalkerPresence}</div>
               <div>Tension Level: {gameState.tension}/10</div>
               <div>Items Found: {[
                 gameState.hasWeapon && 'Weapon',
                 gameState.hasKey && 'Key'
               ].filter(Boolean).join(', ') || 'None'}</div>
+              <div>Status Effects: {gameState.statusEffects.join(', ') || 'None'}</div>
               <div>Encounters: {gameState.encounterCount}</div>
               <hr className="border-orange-800/30" />
               <Button
@@ -305,10 +345,9 @@ export function GameComponent() {
         </Button>
       </div>
 
-      {/* Main game content */}
       <div className={`flex-1 ${!isMobile && 'flex items-center justify-center p-4'}`}>
         <Suspense fallback={<SpookyLoader />}>
-          <SearchParamsWrapper>
+        <SearchParamsWrapper>
             {() => (
               <Card className={`
                 bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden
