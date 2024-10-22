@@ -20,7 +20,7 @@ interface Message {
 export function GameComponent() {
   const router = useRouter()
   const [storyText, setStoryText] = useState<string>('')
-  const [choices, setChoices] = useState<(string | { option: string; result: string })[]>([])
+  const [choices, setChoices] = useState<(string | { option: string; result: string })[]>(['', '', ''])
   const [isMuted, setIsMuted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [savedGames] = useState<{ title: string; date: string }[]>([
@@ -32,7 +32,7 @@ export function GameComponent() {
   const streamStorySegment = async (currentMessages: Message[]) => {
     setIsLoading(true)
     setStoryText('')
-    setChoices([])
+    setChoices(['', '', ''])
 
     try {
       const response = await fetch('/api/generate-story', {
@@ -67,7 +67,9 @@ export function GameComponent() {
             setStoryText(parsedJson.narration)
           }
           if (parsedJson.choices) {
-            setChoices(parsedJson.choices)
+            setChoices(parsedJson.choices.map((choice: string | { option: string; result: string }) => 
+              typeof choice === 'string' ? choice : choice.option
+            ))
           }
         } catch {
           // Ignore parsing errors for incomplete JSON
@@ -78,7 +80,7 @@ export function GameComponent() {
     } catch (error) {
       console.error('Error streaming story segment:', error)
       setStoryText('An error occurred while generating the story. Please try again.')
-      setChoices([])
+      setChoices(['', '', ''])
     } finally {
       setIsLoading(false)
     }
@@ -135,10 +137,12 @@ export function GameComponent() {
                   key={index}
                   onClick={() => handleChoice(choice)}
                   className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
-                  disabled={isLoading}
+                  disabled={isLoading || !choice}
                 >
                   <span className="line-clamp-2 flex-grow">
-                    {typeof choice === 'object' ? choice.option : choice}
+                    {typeof choice === 'string'
+                      ? choice
+                      : (choice && choice.option) || (isLoading ? 'Loading...' : 'Waiting for options...')}
                   </span>
                   <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
                 </Button>
