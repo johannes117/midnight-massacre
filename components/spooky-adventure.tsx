@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -10,7 +10,14 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { FloatingGhosts } from "@/components/floating-ghosts"
 
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function SpookyAdventureComponent() {
+  console.log('Component rendering')
+
   const [screen, setScreen] = useState('home')
   const [storyText, setStoryText] = useState('')
   const [choices, setChoices] = useState<string[]>([])
@@ -20,36 +27,71 @@ export function SpookyAdventureComponent() {
     { title: "The Haunted Mansion", date: "2023-10-31" },
     { title: "The Whispering Woods", date: "2023-11-01" }
   ])
+  const [messages, setMessages] = useState<Message[]>([])
+
+  const generateStorySegment = async (currentMessages: Message[]) => {
+    console.log('Generating story segment', currentMessages);
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/generate-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: currentMessages }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Failed to generate story segment: ${errorData.error || response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Received story segment', data);
+      
+      if (!data.narration || !data.choices) {
+        throw new Error('Invalid response format: missing narration or choices');
+      }
+
+      setStoryText(data.narration);
+      setChoices(data.choices);
+      setMessages([...currentMessages, { role: 'assistant', content: JSON.stringify(data) }]);
+    } catch (error) {
+      console.error('Error generating story segment:', error);
+      setStoryText('An error occurred while generating the story. Please try again.');
+      setChoices([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartAdventure = useCallback(async () => {
+    console.log('Starting adventure')
+    setIsLoading(true)
+    const initialMessage: Message = { role: 'user', content: 'Start a new spooky adventure story.' }
+    await generateStorySegment([initialMessage])
+    setScreen('story')
+  }, [])
 
   useEffect(() => {
-    if (screen === 'story') {
-      setIsLoading(true)
-      setTimeout(() => {
-        setStoryText("As you approach the old, decrepit mansion, you notice carved pumpkins lining the path, their eerie grins flickering in the moonlight. The door creaks open on its own, inviting you inside. What do you do?")
-        setChoices(["Enter the mansion", "Investigate the pumpkins", "Turn back and leave"])
-        setIsLoading(false)
-      }, 2000)
+    console.log('Effect running, screen:', screen, 'messages length:', messages.length)
+    if (screen === 'story' && messages.length === 0) {
+      handleStartAdventure()
     }
-  }, [screen])
+  }, [screen, messages, handleStartAdventure])
 
-  const handleStartAdventure = () => {
-    setScreen('story')
-  }
-
-  const handleChoice = (choice: string) => {
+  const handleChoice = async (choice: string) => {
+    console.log('Handling choice:', choice)
     setIsLoading(true)
-    setTimeout(() => {
-      setStoryText(`You decide to ${choice.toLowerCase()}. As you ${choice === "Enter the mansion" ? "step inside" : choice === "Investigate the pumpkins" ? "lean closer to examine the pumpkins" : "turn to leave"}, a cold breeze sends shivers down your spine. Suddenly, you hear a whisper coming from ${choice === "Enter the mansion" ? "upstairs" : choice === "Investigate the pumpkins" ? "inside one of the pumpkins" : "behind you"}...`)
-      setChoices(["Listen carefully", "Ignore and proceed", "Call out to the whisper"])
-      setIsLoading(false)
-    }, 1500)
+    const userMessage: Message = { role: 'user', content: `I choose: ${choice}` }
+    const updatedMessages = [...messages, userMessage]
+    await generateStorySegment(updatedMessages)
   }
 
   const handleLoadGame = () => {
-    // Implement load game functionality here
-    console.log("Loading last saved game:", savedGames[0].title)
+    console.log('Loading game:', savedGames[0].title)
     setScreen('story')
   }
+
+  console.log('Rendering, screen:', screen, 'isLoading:', isLoading)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
@@ -58,6 +100,7 @@ export function SpookyAdventureComponent() {
       <Card className="w-full max-w-2xl bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden">
         <AnimatePresence mode="wait">
           {screen === 'home' && (
+            console.log('Rendering home screen'),
             <motion.div
               key="home"
               initial={{ opacity: 0, y: 20 }}
