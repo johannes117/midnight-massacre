@@ -11,19 +11,19 @@ export function FloatingGhosts() {
   if (!isClient) return null
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="fixed inset-0 overflow-hidden pointer-events-none">
       {[...Array(10)].map((_, i) => (
         <motion.div 
           key={i} 
           className="absolute text-4xl opacity-10"
           initial={{ 
-            y: `${Math.random() * 100}%`, 
-            x: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}vh`, 
+            left: `${Math.random() * 100}vw`,
             scale: 0.5 + Math.random() * 0.5
           }}
           animate={{ 
-            y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
-            x: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
+            top: [`${Math.random() * 100}vh`, `${Math.random() * 100}vh`],
+            left: [`${Math.random() * 100}vw`, `${Math.random() * 100}vw`],
           }}
           transition={{ 
             duration: 20 + Math.random() * 10,
