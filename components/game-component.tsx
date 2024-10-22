@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, Suspense, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
@@ -167,11 +167,20 @@ export function GameComponent() {
         role: 'user', 
         content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
       };
-      fetchStorySegment([initialMessage]);
+      return initialMessage;
     } else if (messages.length === 0) {
       router.push('/');
     }
-  }, [router, messages, fetchStorySegment]);
+    return null;
+  }, [router, messages]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const initialMessage = handleSearchParams(searchParams);
+    if (initialMessage) {
+      fetchStorySegment([initialMessage]);
+    }
+  }, [handleSearchParams, fetchStorySegment]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-900 via-black to-purple-900 text-red-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
@@ -179,53 +188,50 @@ export function GameComponent() {
       
       <Suspense fallback={<SpookyLoader />}>
         <SearchParamsWrapper>
-          {(searchParams: URLSearchParams) => {
-            handleSearchParams(searchParams);
-            return (
-              <Card className="w-full max-w-2xl h-[calc(100vh-2rem)] sm:h-auto sm:max-h-[calc(100vh-4rem)] bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={storySegment?.story || 'loading'}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col h-full"
-                  >
-                    <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
-                      {gameState.hasWeapon && (
-                        <div className="text-red-400 text-sm">You are armed</div>
+          {() => (
+            <Card className="w-full max-w-2xl h-[calc(100vh-2rem)] sm:h-auto sm:max-h-[calc(100vh-4rem)] bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={storySegment?.story || 'loading'}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col h-full"
+                >
+                  <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
+                    {gameState.hasWeapon && (
+                      <div className="text-red-400 text-sm">You are armed</div>
+                    )}
+                    <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-red-800/50">
+                      {isLoading ? (
+                        <SpookyLoader />
+                      ) : (
+                        <p className="text-lg leading-relaxed text-red-200">
+                          {storySegment?.story}
+                        </p>
                       )}
-                      <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-red-800/50">
-                        {isLoading ? (
-                          <SpookyLoader />
-                        ) : (
-                          <p className="text-lg leading-relaxed text-red-200">
-                            {storySegment?.story}
-                          </p>
-                        )}
-                      </ScrollArea>
-                      {!isLoading && storySegment && (
-                        <div className="w-full space-y-4">
-                          {isGameOver ? renderGameOver() : storySegment.choices.map((choice, index) => renderChoice(choice, index))}
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                      <Button
-                        variant="ghost"
-                        onClick={() => router.push('/')}
-                        className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
-                      >
-                        <ArrowLeft className="h-5 w-5 mr-2" />
-                        Give Up
-                      </Button>
-                    </CardFooter>
-                  </motion.div>
-                </AnimatePresence>
-              </Card>
-            );
-          }}
+                    </ScrollArea>
+                    {!isLoading && storySegment && (
+                      <div className="w-full space-y-4">
+                        {isGameOver ? renderGameOver() : storySegment.choices.map((choice, index) => renderChoice(choice, index))}
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <Button
+                      variant="ghost"
+                      onClick={() => router.push('/')}
+                      className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-5 w-5 mr-2" />
+                      Give Up
+                    </Button>
+                  </CardFooter>
+                </motion.div>
+              </AnimatePresence>
+            </Card>
+          )}
         </SearchParamsWrapper>
       </Suspense>
 
