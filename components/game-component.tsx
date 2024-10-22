@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useCallback, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, RotateCcw, Home } from 'lucide-react'
@@ -10,6 +10,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { FloatingGhosts } from "@/components/floating-ghosts"
 import SpookyLoader from './spooky-loader'
+import dynamic from 'next/dynamic'
+
+const SearchParamsWrapper = dynamic(() => import('@/components/search-params-wrapper'), { ssr: false })
 
 interface Message {
   role: 'user' | 'assistant';
@@ -38,25 +41,12 @@ const INITIAL_GAME_STATE: GameState = {
 
 export function GameComponent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [storySegment, setStorySegment] = useState<StoryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE)
   const [messages, setMessages] = useState<Message[]>([])
   const [isGameOver, setIsGameOver] = useState(false)
-
-  const resetGame = useCallback(() => {
-    setGameState(INITIAL_GAME_STATE);
-    setMessages([]);
-    setIsGameOver(false);
-    const initialMessage: Message = { 
-      role: 'user', 
-      content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
-    };
-    fetchStorySegment([initialMessage]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
@@ -100,18 +90,16 @@ export function GameComponent() {
     }
   }, [gameState]);
 
-  useEffect(() => {
-    const startGame = searchParams.get('start') === 'true';
-    if (startGame && messages.length === 0) {
-      const initialMessage: Message = { 
-        role: 'user', 
-        content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
-      };
-      fetchStorySegment([initialMessage]);
-    } else if (messages.length === 0) {
-      router.push('/');
-    }
-  }, [router, messages, fetchStorySegment, searchParams]);
+  const resetGame = useCallback(() => {
+    setGameState(INITIAL_GAME_STATE);
+    setMessages([]);
+    setIsGameOver(false);
+    const initialMessage: Message = { 
+      role: 'user', 
+      content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
+    };
+    fetchStorySegment([initialMessage]);
+  }, [fetchStorySegment]);
 
   const handleChoice = useCallback(async (choice: string) => {
     const userMessage: Message = { role: 'user', content: `I choose: ${choice}` }
@@ -172,52 +160,74 @@ export function GameComponent() {
     );
   }, [storySegment?.story, resetGame, router]);
 
+  const handleSearchParams = useCallback((searchParams: URLSearchParams) => {
+    const startGame = searchParams.get('start') === 'true';
+    if (startGame && messages.length === 0) {
+      const initialMessage: Message = { 
+        role: 'user', 
+        content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
+      };
+      fetchStorySegment([initialMessage]);
+    } else if (messages.length === 0) {
+      router.push('/');
+    }
+  }, [router, messages, fetchStorySegment]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-900 via-black to-purple-900 text-red-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
       <FloatingGhosts />
       
-      <Card className="w-full max-w-2xl h-[calc(100vh-2rem)] sm:h-auto sm:max-h-[calc(100vh-4rem)] bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={storySegment?.story || 'loading'}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col h-full"
-          >
-            <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
-              {gameState.hasWeapon && (
-                <div className="text-red-400 text-sm">You are armed</div>
-              )}
-              <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-red-800/50">
-                {isLoading ? (
-                  <SpookyLoader />
-                ) : (
-                  <p className="text-lg leading-relaxed text-red-200">
-                    {storySegment?.story}
-                  </p>
-                )}
-              </ScrollArea>
-              {!isLoading && storySegment && (
-                <div className="w-full space-y-4">
-                  {isGameOver ? renderGameOver() : storySegment.choices.map((choice, index) => renderChoice(choice, index))}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button
-                variant="ghost"
-                onClick={() => router.push('/')}
-                className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Give Up
-              </Button>
-            </CardFooter>
-          </motion.div>
-        </AnimatePresence>
-      </Card>
+      <Suspense fallback={<SpookyLoader />}>
+        <SearchParamsWrapper>
+          {(searchParams: URLSearchParams) => {
+            handleSearchParams(searchParams);
+            return (
+              <Card className="w-full max-w-2xl h-[calc(100vh-2rem)] sm:h-auto sm:max-h-[calc(100vh-4rem)] bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={storySegment?.story || 'loading'}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col h-full"
+                  >
+                    <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
+                      {gameState.hasWeapon && (
+                        <div className="text-red-400 text-sm">You are armed</div>
+                      )}
+                      <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-red-800/50">
+                        {isLoading ? (
+                          <SpookyLoader />
+                        ) : (
+                          <p className="text-lg leading-relaxed text-red-200">
+                            {storySegment?.story}
+                          </p>
+                        )}
+                      </ScrollArea>
+                      {!isLoading && storySegment && (
+                        <div className="w-full space-y-4">
+                          {isGameOver ? renderGameOver() : storySegment.choices.map((choice, index) => renderChoice(choice, index))}
+                        </div>
+                      )}
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <Button
+                        variant="ghost"
+                        onClick={() => router.push('/')}
+                        className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
+                      >
+                        <ArrowLeft className="h-5 w-5 mr-2" />
+                        Give Up
+                      </Button>
+                    </CardFooter>
+                  </motion.div>
+                </AnimatePresence>
+              </Card>
+            );
+          }}
+        </SearchParamsWrapper>
+      </Suspense>
 
       <Button
         variant="ghost"
