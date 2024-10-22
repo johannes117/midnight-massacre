@@ -33,7 +33,6 @@ export class GameMechanics {
   static calculateEnvironmentalModifiers(gameState: GameState): number {
     const { darkness, noise, weather } = gameState.environmentalModifiers;
     const totalModifier = Math.min(5, darkness + noise + weather);
-    console.log(`Environmental Modifier: ${totalModifier}`);
     return totalModifier;
   }
 
@@ -49,7 +48,6 @@ export class GameMechanics {
       modifier -= 1;
     }
     modifier = Math.max(-2, Math.min(2, modifier));
-    console.log(`Status Modifier: ${modifier}`);
     return modifier;
   }
 
@@ -61,7 +59,6 @@ export class GameMechanics {
       imminent: -2
     };
     const modifier = modifiers[stalkerPresence];
-    console.log(`Stalker Modifier: ${modifier}`);
     return modifier;
   }
 
@@ -84,16 +81,6 @@ export class GameMechanics {
     
     const totalRoll = roll + environmentalMod + statusMod + stalkerMod;
     const success = totalRoll >= choice.dc;
-
-    console.log(`Action Resolution:
-      Roll: ${roll}
-      Environmental Modifier: ${environmentalMod}
-      Status Modifier: ${statusMod}
-      Stalker Modifier: ${stalkerMod}
-      Total Roll: ${totalRoll}
-      DC: ${choice.dc}
-      Success: ${success}
-    `);
 
     const survivalDelta = success ? choice.rewardValue : -choice.riskFactor;
     const newSurvivalScore = Math.min(
