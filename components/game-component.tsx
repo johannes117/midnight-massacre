@@ -51,6 +51,7 @@ export function GameComponent() {
       }
 
       let accumulatedData = ''
+      let narrationComplete = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -63,10 +64,14 @@ export function GameComponent() {
           const completeJsonString = JSONAutocomplete(accumulatedData)
           const parsedJson = JSON.parse(completeJsonString)
 
-          if (parsedJson.narration) {
+          if (parsedJson.narration && !narrationComplete) {
             setStoryText(parsedJson.narration)
+            if (parsedJson.choices) {
+              narrationComplete = true
+            }
           }
-          if (parsedJson.choices) {
+          
+          if (narrationComplete && parsedJson.choices) {
             setChoices(parsedJson.choices.map((choice: string | { option: string; result: string }) => 
               typeof choice === 'string' ? choice : choice.option
             ))
