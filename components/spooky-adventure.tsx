@@ -51,7 +51,7 @@ export function SpookyAdventureComponent() {
         throw new Error('Invalid response format: missing narration or choices');
       }
 
-      setStoryText(data.narration);
+      setStoryText(typeof data.narration === 'object' ? JSON.stringify(data.narration, null, 2) : data.narration);
       setChoices(data.choices);
       setMessages([...currentMessages, { role: 'assistant', content: JSON.stringify(data) }]);
     } catch (error) {
@@ -153,7 +153,9 @@ export function SpookyAdventureComponent() {
                   {isLoading ? (
                     <Skeleton className="w-full h-full bg-orange-900/30" />
                   ) : (
-                    <p className="text-lg leading-relaxed text-orange-200">{storyText}</p>
+                    <p className="text-lg leading-relaxed text-orange-200">
+                      {typeof storyText === 'object' ? JSON.stringify(storyText, null, 2) : storyText}
+                    </p>
                   )}
                 </ScrollArea>
                 <div className="w-full space-y-4">
