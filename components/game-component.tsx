@@ -24,8 +24,8 @@ interface StorySegment {
 export function GameComponent() {
   const router = useRouter()
   const [storySegment, setStorySegment] = useState<StorySegment | null>(null)
-  const [isMuted, setIsMuted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
   const [savedGames] = useState<{ title: string; date: string }[]>([
     { title: "The Haunted Mansion", date: "2023-10-31" },
     { title: "The Whispering Woods", date: "2023-11-01" }
@@ -70,7 +70,8 @@ export function GameComponent() {
     if (messages.length === 0) {
       handleStartAdventure()
     }
-  }, [messages, handleStartAdventure])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleChoice = useCallback(async (choice: string) => {
     console.log('Handling choice:', choice)
