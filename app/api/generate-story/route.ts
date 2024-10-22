@@ -13,48 +13,79 @@ interface ChatMessage {
 
 export const runtime = 'edge';
 
-async function generateStoryResponse(messages: ChatMessage[]) {
+// Game state interface to track player progress
+interface GameState {
+  hasWeapon: boolean;
+  hasKey: boolean;
+  tension: number;
+  encounterCount: number;
+}
+
+const INITIAL_GAME_STATE: GameState = {
+  hasWeapon: false,
+  hasKey: false,
+  tension: 0,
+  encounterCount: 0,
+};
+
+const SYSTEM_PROMPT = `You are crafting an interactive slasher horror story in the tradition of Halloween and Friday the 13th. 
+The story follows a protagonist being hunted by an unstoppable masked killer known as "The Stalker" through a small town during Halloween night.
+
+Core Elements:
+1. Goal: The player must survive the night by either escaping or, if they've found the right items, confronting the killer
+2. The Stalker: An emotionless, relentless killer who becomes more aggressive as the story progresses
+3. Setting: A small town during Halloween night, with locations like houses, streets, shops, and dark alleys
+4. Items: The player can find weapons, keys, or tools to aid their escape
+
+Story Rules:
+1. Build tension through environmental details, unsettling sounds, and glimpses of The Stalker
+2. Create a sense of being hunted - The Stalker is always nearby
+3. Choices must have meaningful consequences
+4. Death is possible but should result from clear player decisions
+5. Include opportunities to find items that help with escape or survival
+
+Victory Conditions:
+- Escape: Find key items and reach a safe location
+- Confrontation: With the right weapons and preparation, face The Stalker
+- Each ending should feel earned through player choices
+
+For each response, provide:
+1. A vivid story segment (2-3 paragraphs) with:
+   - Rich sensory details
+   - Clear signs of danger
+   - Environmental storytelling
+2. Exactly three distinct choices that:
+   - Lead to different outcomes
+   - Include risk vs. reward decisions
+   - Consider the player's current items and situation
+
+Format your response as valid JSON:
+{
+  "story": "your horror story text here",
+  "choices": ["choice 1", "choice 2", "choice 3"],
+  "gameState": {
+    "hasWeapon": boolean,
+    "hasKey": boolean,
+    "tension": number,
+    "encounterCount": number
+  }
+}`;
+
+async function generateStoryResponse(messages: ChatMessage[], currentGameState: GameState = INITIAL_GAME_STATE) {
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       {
         role: 'system',
-        content: `You are a master of psychological horror and supernatural terror, crafting deeply unsettling and atmospheric stories in the tradition of H.P. Lovecraft, Edgar Allan Poe, and modern horror authors.
-
-        Follow these principles for each story segment:
-        1. Atmosphere is paramount - use vivid sensory details to create a sense of dread
-        2. Build psychological tension through uncertainty and unreliable perception
-        3. Incorporate elements of:
-           - Environmental horror (unsettling locations, strange phenomena)
-           - Psychological horror (paranoia, madness, isolation)
-           - Body horror (transformation, decay, violation of natural order)
-           - Cosmic horror (incomprehensible entities, existential dread)
-        4. Use pacing to create tension - alternate between subtle unease and intense terror
-        5. Employ literary devices like:
-           - Foreshadowing of greater horrors to come
-           - Unreliable narration
-           - Vivid metaphors and imagery
-           - Strategic use of silence and darkness
-        
-        For each response, provide:
-        1. A story segment (2-3 paragraphs) that builds tension and horror
-        2. Exactly three distinct choices that:
-           - Lead to different types of horror (psychological, supernatural, etc.)
-           - Escalate the situation in different ways
-           - Have meaningful consequences
-           - Hint at different horrors to come
-        
-        Format your response as valid JSON with this structure:
-        {
-          "story": "your horror story text here",
-          "choices": ["choice 1", "choice 2", "choice 3"]
-        }
-        
-        Remember: True horror comes from the buildup of dread and the fear of the unknown, not just gore or jump scares.`
+        content: SYSTEM_PROMPT
+      },
+      {
+        role: 'system',
+        content: `Current game state: ${JSON.stringify(currentGameState)}`
       },
       ...messages
     ],
-    temperature: 0.8, // Increased for more creative, unpredictable responses
+    temperature: 0.8,
     response_format: { type: "json_object" },
   });
 
@@ -70,7 +101,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { messages } = await req.json() as { messages: ChatMessage[] };
+    const { messages, gameState } = await req.json() as { 
+      messages: ChatMessage[];
+      gameState?: GameState;
+    };
+
     if (!messages) {
       return Response.json(
         { error: 'No messages provided' },
@@ -78,7 +113,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const response = await generateStoryResponse(messages);
+    const response = await generateStoryResponse(messages, gameState || INITIAL_GAME_STATE);
     return Response.json(JSON.parse(response));
     
   } catch (err) {
@@ -87,8 +122,9 @@ export async function POST(req: NextRequest) {
       { 
         error: err instanceof Error ? err.message : 'An error occurred',
         fallback: {
-          story: "The darkness seems to have consumed your story... Perhaps we should try again?",
-          choices: ["Return to the beginning", "Try a different path", "Flee while you still can"]
+          story: "The Stalker's shadow looms closer... Perhaps we should try a different path?",
+          choices: ["Run and hide", "Look for another way", "Face your fate"],
+          gameState: INITIAL_GAME_STATE
         }
       },
       { status: 500 }
