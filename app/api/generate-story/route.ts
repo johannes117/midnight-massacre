@@ -9,31 +9,49 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are crafting an interactive horror story with specific mechanics. For each response, provide:
+const SYSTEM_PROMPT = `You are crafting an interactive horror story with specific mechanics. RESPOND ONLY WITH VALID JSON in the following format:
+{
+  "story": "Your vivid story text here...",
+  "choices": [
+    {
+      "text": "Choice description",
+      "dc": number between 1-20,
+      "riskFactor": number between -30 and -5,
+      "rewardValue": number between 5 and 20,
+      "type": "combat" OR "stealth" OR "escape" OR "search",
+      "logic": "Explanation of choice mechanics"
+    }
+  ],
+  "gameState": {
+    "survivalScore": number,
+    "hasWeapon": boolean,
+    "hasKey": boolean,
+    "tension": number,
+    "encounterCount": number,
+    "stalkerPresence": "distant" OR "hunting" OR "closingIn" OR "imminent",
+    "statusEffects": string[],
+    "environmentalModifiers": {
+      "darkness": number,
+      "noise": number,
+      "weather": number
+    }
+  }
+}
 
-1. A vivid story segment (2-3 paragraphs) that:
-   - Builds tension through environmental details
-   - Includes sensory information
-   - Reflects the current stalker presence level
-   - Acknowledges player's previous choices and current status
+Story requirements:
+1. Write 2-3 vivid paragraphs that:
+   - Build tension through environmental details
+   - Include sensory information
+   - Reflect the current stalker presence level
+   - Acknowledge player's previous choices and status
 
-2. Exactly three choices, each with:
-   - Difficulty Class (DC): 1-20 (higher for riskier actions)
-   - Risk Factor: -5 to -30 (survival points lost on failure)
-   - Reward Value: +5 to +20 (survival points gained on success)
-   - Action Type: combat, stealth, escape, or search
-   
-Consider the current game state:
-- Survival Score (player dies at 0)
-- Stalker Presence (distant, hunting, closingIn, imminent)
-- Status Effects (injured, hidden, exposed)
-- Items (weapon, key)
-
-Adjust difficulty and stakes based on:
-- If survival score is low (<50), provide some lower-risk options
-- If stalker presence is high, increase stakes and urgency
-- If player has items, offer relevant tactical options
-- If status effects are active, reflect them in choices`;
+Choice requirements:
+1. Provide EXACTLY three choices
+2. Adjust difficulty based on:
+   - Low survival score (<50): offer lower-risk options
+   - High stalker presence: increase stakes and urgency
+   - Available items: provide tactical options
+   - Active status effects: reflect in choices`;
 
 function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
   let adjustedDC = choice.dc;
@@ -124,8 +142,7 @@ export async function POST(req: NextRequest) {
       gameState: GameState;
     };
 
-    const gameStatePrompt = `
-Current game state:
+    const gameStatePrompt = `Current game state (INCLUDE THIS INFORMATION IN YOUR RESPONSE JSON):
 - Survival Score: ${gameState.survivalScore}
 - Stalker Presence: ${gameState.stalkerPresence}
 - Status Effects: ${gameState.statusEffects.join(', ') || 'none'}
@@ -136,7 +153,6 @@ Current game state:
 - Tension: ${gameState.tension}/10
 - Encounters: ${gameState.encounterCount}`;
 
-    // Convert messages to ChatCompletionMessageParam format
     const apiMessages: ChatCompletionMessageParam[] = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: gameStatePrompt },
@@ -147,25 +163,43 @@ Current game state:
     ];
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini',
       messages: apiMessages,
       temperature: 0.8,
-      response_format: { type: "json_object" },
     });
 
-    const response: StoryResponse = JSON.parse(completion.choices[0]?.message?.content || '');
+    let response: StoryResponse;
+    try {
+      const content = completion.choices[0]?.message?.content || '{}';
+      response = JSON.parse(content);
 
-    response.choices = validateChoices(response.choices);
-    response.choices = response.choices.map(choice => 
-      adjustChoiceDifficulty(choice, gameState)
-    );
+      // Validate response structure
+      if (!response.story || !Array.isArray(response.choices) || !response.gameState) {
+        throw new Error('Invalid response structure');
+      }
 
-    response.gameState = {
-      ...gameState,
-      ...response.gameState,
-      survivalScore: gameState.survivalScore,
-      tension: Math.min(10, gameState.tension)
-    };
+      // Validate and adjust choices
+      if (response.choices.length !== 3) {
+        throw new Error('Invalid number of choices');
+      }
+
+      response.choices = validateChoices(response.choices);
+      response.choices = response.choices.map(choice => 
+        adjustChoiceDifficulty(choice, gameState)
+      );
+
+      // Ensure game state consistency
+      response.gameState = {
+        ...gameState,
+        ...response.gameState,
+        survivalScore: gameState.survivalScore,
+        tension: Math.min(10, gameState.tension)
+      };
+
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError);
+      throw new Error('Failed to parse AI response');
+    }
 
     return Response.json(response);
   } catch (error) {
