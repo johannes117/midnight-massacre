@@ -56,20 +56,6 @@
   font-family: 'CreepsterCaps', cursive;
 }
 
-/* Fog Animation */
-@keyframes fog {
-  0% {
-    transform: translateY(0);
-  }
-  100% {
-    transform: translateY(-100%);
-  }
-}
-
-.animate-fog {
-  animation: fog 20s linear infinite;
-}
-
 /* Blood Drip Animation */
 .blood-drip {
   position: relative;
