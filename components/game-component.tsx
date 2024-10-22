@@ -16,6 +16,16 @@ interface Message {
   content: string;
 }
 
+interface StoryResponse {
+  story: string;
+  choices: string[];
+  error?: string;
+  fallback?: {
+    story: string;
+    choices: string[];
+  };
+}
+
 export function GameComponent() {
   const router = useRouter()
   const [storyText, setStoryText] = useState<string>('')
@@ -28,10 +38,10 @@ export function GameComponent() {
   ])
   const [messages, setMessages] = useState<Message[]>([])
 
-  const streamStorySegment = useCallback(async (currentMessages: Message[]) => {
+  const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
     setStoryText('');
-    // Don't reset choices yet to avoid UI jumping
+    setChoices(['Loading...', 'Loading...', 'Loading...']);
     
     try {
       const response = await fetch('/api/generate-story', {
@@ -40,66 +50,37 @@ export function GameComponent() {
         body: JSON.stringify({ messages: currentMessages }),
       });
   
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const data: StoryResponse = await response.json();
+      
+      if (data.error) {
+        const fallbackStory = data.fallback?.story || 'An error occurred while generating the story.';
+        const fallbackChoices = data.fallback?.choices || ['Try again', 'Start over', 'Return to menu'];
+        
+        setStoryText(fallbackStory);
+        setChoices(fallbackChoices);
+      } else {
+        setStoryText(data.story);
+        setChoices(data.choices);
+        
+        setMessages(prevMessages => [...prevMessages, {
+          role: 'assistant',
+          content: JSON.stringify({ story: data.story, choices: data.choices })
+        }]);
       }
-  
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('ReadableStream not supported');
-      }
-  
-      let currentStoryText = '';
-      setChoices(['...', '...', '...']); // Show loading state in choices
-  
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-  
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
-  
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
-            
-            if (data.type === 'narration') {
-              currentStoryText += data.content;
-              setStoryText(currentStoryText);
-            } else if (data.type === 'choices') {
-              // Only set choices once we receive them
-              setChoices(data.content);
-            } else if (data.type === 'error') {
-              setStoryText(data.content);
-              setChoices(['Try again', 'Start over', 'Return to menu']);
-            }
-          } catch (e) {
-            console.debug('Error parsing chunk:', e);
-          }
-        }
-      }
-  
-      setMessages(prevMessages => [...prevMessages, { 
-        role: 'assistant', 
-        content: JSON.stringify({ 
-          narration: currentStoryText,
-          choices 
-        })
-      }]);
     } catch (error) {
-      console.error('Error streaming story segment:', error);
+      console.error('Error fetching story segment:', error);
       setStoryText('An error occurred while generating the story. Please try again.');
       setChoices(['Try again', 'Start over', 'Return to menu']);
     } finally {
       setIsLoading(false);
     }
-  }, [choices]);
+  }, []);
 
   const handleStartAdventure = useCallback(async () => {
     console.log('Starting adventure')
     const initialMessage: Message = { role: 'user', content: 'Start a new spooky adventure story.' }
-    await streamStorySegment([initialMessage])
-  }, [streamStorySegment])
+    await fetchStorySegment([initialMessage])
+  }, [fetchStorySegment])
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -112,8 +93,8 @@ export function GameComponent() {
     const choiceContent = typeof choice === 'object' ? choice.option : choice
     const userMessage: Message = { role: 'user', content: `I choose: ${choiceContent}` }
     const updatedMessages = [...messages, userMessage]
-    await streamStorySegment(updatedMessages)
-  }, [messages, streamStorySegment]);
+    await fetchStorySegment(updatedMessages)
+  }, [messages, fetchStorySegment]);
 
   const memoizedFloatingGhosts = useMemo(() => <FloatingGhosts />, [])
 
