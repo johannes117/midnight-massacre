@@ -1,0 +1,160 @@
+{
+    "killers": [
+      {
+        "id": "woodsman",
+        "name": "The Woodsman",
+        "description": "A hulking figure in a wooden mask and tattered forest ranger uniform. Carries a massive woodcutting axe.",
+        "signature": "Leaves behind pine needles and wooden splinters",
+        "style": "Methodical and territorial, uses the environment",
+        "background": "Legend says he was a forest ranger who went mad protecting his woods"
+      },
+      {
+        "id": "maskmaker",
+        "name": "The Maskmaker",
+        "description": "Wears a porcelain doll mask with different expressions painted on each side. Dressed in a vintage carnival worker's outfit.",
+        "signature": "Leaves behind broken porcelain shards",
+        "style": "Theatrical and psychological, likes to toy with victims",
+        "background": "Once a talented maskmaker who lost his family at a carnival"
+      },
+      {
+        "id": "groundskeeper",
+        "name": "The Groundskeeper",
+        "description": "Sports a burlap sack mask with crude stitching. Wears dirty coveralls covered in soil.",
+        "signature": "Trails of disturbed earth and garden tools",
+        "style": "Brutal and direct, uses gardening tools as weapons",
+        "background": "Former school groundskeeper who snapped after years of abuse"
+      }
+    ],
+    "locations": [
+      {
+        "id": "lakeside",
+        "name": "Camp Crystal Lake Academy",
+        "description": "A prestigious private boarding school built on the shores of a secluded lake",
+        "areas": [
+          "Main Academic Building",
+          "Student Dormitories",
+          "Boathouse",
+          "Athletic Fields",
+          "Forest Trail",
+          "Lake Shore"
+        ],
+        "atmosphere": "Fog rolling off the lake, creaking wooden buildings"
+      },
+      {
+        "id": "carnival",
+        "name": "Shadowland Carnival",
+        "description": "An abandoned carnival ground that reopens every Halloween",
+        "areas": [
+          "Hall of Mirrors",
+          "Ferris Wheel",
+          "Carousel",
+          "Game Stalls",
+          "Maintenance Tunnels",
+          "Cotton Candy Stand"
+        ],
+        "atmosphere": "Flickering neon lights, eerie calliope music"
+      },
+      {
+        "id": "highschool",
+        "name": "Ravenwood High",
+        "description": "A sprawling high school hosting its annual Halloween dance",
+        "areas": [
+          "Gymnasium",
+          "Cafeteria",
+          "Library",
+          "Science Labs",
+          "Locker Rooms",
+          "Auditorium"
+        ],
+        "atmosphere": "Halloween decorations, empty hallways with flickering fluorescents"
+      }
+    ],
+    "characters": [
+      {
+        "type": "friend",
+        "options": [
+          {
+            "name": "Alex Thompson",
+            "archetype": "The Best Friend",
+            "description": "Your closest friend since childhood, known for being loyal and level-headed",
+            "personality": "Supportive and brave"
+          },
+          {
+            "name": "Jamie Chen",
+            "archetype": "The Tech Whiz",
+            "description": "Computer club president who always has the latest gadgets",
+            "personality": "Smart and resourceful"
+          },
+          {
+            "name": "Casey Martinez",
+            "archetype": "The Athlete",
+            "description": "Star of the track team with quick reflexes",
+            "personality": "Athletic and protective"
+          }
+        ]
+      },
+      {
+        "type": "love_interest",
+        "options": [
+          {
+            "name": "Jordan Riley",
+            "archetype": "The New Student",
+            "description": "Mysterious transfer student with a troubled past",
+            "personality": "Intriguing and complex"
+          },
+          {
+            "name": "Sam Whitney",
+            "archetype": "The Artist",
+            "description": "Talented photographer always capturing the perfect shot",
+            "personality": "Creative and observant"
+          },
+          {
+            "name": "Taylor Morgan",
+            "archetype": "The Class President",
+            "description": "Natural leader with a perfect academic record",
+            "personality": "Responsible and determined"
+          }
+        ]
+      },
+      {
+        "type": "wild_card",
+        "options": [
+          {
+            "name": "Quinn Blake",
+            "archetype": "The Rebel",
+            "description": "School troublemaker with a hidden heart of gold",
+            "personality": "Unpredictable but reliable"
+          },
+          {
+            "name": "Morgan Price",
+            "archetype": "The Rich Kid",
+            "description": "Wealthy student with access to resources but trust issues",
+            "personality": "Privileged but complex"
+          },
+          {
+            "name": "Drew Parker",
+            "archetype": "The Conspiracy Theorist",
+            "description": "Always researching local legends and supernatural events",
+            "personality": "Paranoid but knowledgeable"
+          }
+        ]
+      }
+    ],
+    "openingScenes": [
+      {
+        "location": "lakeside",
+        "scene": "A group of students sneaking out to the lake for a midnight swim party",
+        "mood": "Playful anticipation turning to dread"
+      },
+      {
+        "location": "carnival",
+        "scene": "Friends exploring the newly reopened carnival on Halloween night",
+        "mood": "Excited curiosity becoming unease"
+      },
+      {
+        "location": "highschool",
+        "scene": "The Halloween dance in full swing before the power goes out",
+        "mood": "Festive celebration descending into chaos"
+      }
+    ]
+  }
