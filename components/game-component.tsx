@@ -20,6 +20,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
 export function GameComponent() {
   const router = useRouter()
   const [storyText, setStoryText] = useState<string>('')
@@ -32,7 +33,7 @@ export function GameComponent() {
   ])
   const [messages, setMessages] = useState<Message[]>([])
 
-  const streamStorySegment = async (currentMessages: Message[]) => {
+  const streamStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
     setStoryText('');
     setChoices(['', '', '']); // Reset choices but don't show loading state
@@ -79,11 +80,11 @@ export function GameComponent() {
         }
       }
   
-      setMessages([...currentMessages, { 
+      setMessages(prevMessages => [...prevMessages, { 
         role: 'assistant', 
         content: JSON.stringify({ 
           narration: fullNarration, 
-          choices: choices 
+          choices 
         })
       }]);
     } catch (error) {
@@ -93,13 +94,14 @@ export function GameComponent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array since it doesn't depend on any external state
 
   const handleStartAdventure = useCallback(async () => {
     console.log('Starting adventure')
     const initialMessage: Message = { role: 'user', content: 'Start a new spooky adventure story.' }
     await streamStorySegment([initialMessage])
-  }, [])
+  }, [streamStorySegment])
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -107,15 +109,48 @@ export function GameComponent() {
     }
   }, [messages, handleStartAdventure])
 
-  const handleChoice = async (choice: string | { option: string; result: string }) => {
+  const handleChoice = useCallback(async (choice: string | { option: string; result: string }) => {
     console.log('Handling choice:', choice)
     const choiceContent = typeof choice === 'object' ? choice.option : choice
     const userMessage: Message = { role: 'user', content: `I choose: ${choiceContent}` }
     const updatedMessages = [...messages, userMessage]
     await streamStorySegment(updatedMessages)
-  }
+  }, [messages, streamStorySegment]);
 
   const memoizedFloatingGhosts = useMemo(() => <FloatingGhosts />, [])
+
+  const renderChoice = useCallback((choice: string | { option: string; result: string }, index: number) => (
+    <Button
+      key={index}
+      onClick={() => handleChoice(choice)}
+      className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
+      disabled={isLoading || !choice}
+    >
+      <span className="line-clamp-2 flex-grow">
+        {typeof choice === 'string'
+          ? choice
+          : choice?.option || (isLoading ? 'Loading...' : 'Waiting for options...')}
+      </span>
+      <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
+    </Button>
+  ), [handleChoice, isLoading]);
+
+  const renderSavedGame = useCallback((game: { title: string; date: string }, index: number) => (
+    <Button
+      key={index}
+      variant="ghost"
+      className="w-full justify-start text-orange-300 hover:text-orange-200 hover:bg-orange-950/50"
+      onClick={() => {
+        console.log(`Loading game: ${game.title}`)
+      }}
+    >
+      <Skull className="mr-2 h-5 w-5" />
+      <div className="text-left">
+        <div>{game.title}</div>
+        <div className="text-xs text-orange-500">{game.date}</div>
+      </div>
+    </Button>
+  ), []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
@@ -141,21 +176,7 @@ export function GameComponent() {
               )}
             </ScrollArea>
             <div className="w-full space-y-4">
-              {choices.map((choice, index) => (
-                <Button
-                  key={index}
-                  onClick={() => handleChoice(choice)}
-                  className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
-                  disabled={isLoading || !choice}
-                >
-                  <span className="line-clamp-2 flex-grow">
-                    {typeof choice === 'string'
-                      ? choice
-                      : choice?.option || (isLoading ? 'Loading...' : 'Waiting for options...')}
-                  </span>
-                  <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
-                </Button>
-              ))}
+              {choices.map((choice, index) => renderChoice(choice, index))}
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
@@ -205,22 +226,7 @@ export function GameComponent() {
             <div className="mb-6">
               <h2 className="text-lg font-semibold text-orange-400 mb-2">Saved Games</h2>
               <ScrollArea className="h-[50vh]">
-                {savedGames.map((game, index) => (
-                  <Button
-                    key={index}
-                    variant="ghost"
-                    className="w-full justify-start text-orange-300 hover:text-orange-200 hover:bg-orange-950/50"
-                    onClick={() => {
-                      console.log(`Loading game: ${game.title}`)
-                    }}
-                  >
-                    <Skull className="mr-2 h-5 w-5" />
-                    <div className="text-left">
-                      <div>{game.title}</div>
-                      <div className="text-xs text-orange-500">{game.date}</div>
-                    </div>
-                  </Button>
-                ))}
+                {savedGames.map((game, index) => renderSavedGame(game, index))}
               </ScrollArea>
             </div>
           </nav>

@@ -72,32 +72,67 @@ export async function POST(req: NextRequest) {
 
     const transformStream = new TransformStream({
       async transform(chunk, controller) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        fullNarration += content;
-        
-        controller.enqueue(JSON.stringify({
-          type: 'narration',
-          content: content
-        }) + '\n');
+        try {
+          // Safely access the content with null checks
+          const content = chunk?.choices?.[0]?.delta?.content;
+          
+          if (content) {
+            fullNarration += content;
+            controller.enqueue(JSON.stringify({
+              type: 'narration',
+              content: content
+            }) + '\n');
+          }
+        } catch (error) {
+          console.error('Error in transform:', error);
+          // Don't throw here, just log the error and continue
+        }
       },
       async flush(controller) {
-        // Step 2: Generate choices after narration is complete
-        const choicesResponse = await generateChoices(messages, fullNarration);
-        const content = choicesResponse.choices[0]?.message?.content;
-        
-        if (content) {
-          const choices = JSON.parse(content);
+        try {
+          // Step 2: Generate choices after narration is complete
+          const choicesResponse = await generateChoices(messages, fullNarration);
+          const content = choicesResponse?.choices?.[0]?.message?.content;
+          
+          if (content) {
+            try {
+              const parsedChoices = JSON.parse(content);
+              if (parsedChoices?.choices && Array.isArray(parsedChoices.choices)) {
+                controller.enqueue(JSON.stringify({
+                  type: 'choices',
+                  content: parsedChoices.choices
+                }) + '\n');
+              } else {
+                // Fallback if choices aren't in expected format
+                controller.enqueue(JSON.stringify({
+                  type: 'choices',
+                  content: ['Continue the story', 'Start over', 'Return to menu']
+                }) + '\n');
+              }
+            } catch (parseError) {
+              console.error('Error parsing choices:', parseError);
+              // Provide fallback choices on parse error
+              controller.enqueue(JSON.stringify({
+                type: 'choices',
+                content: ['Continue the story', 'Start over', 'Return to menu']
+              }) + '\n');
+            }
+          }
+        } catch (error) {
+          console.error('Error in flush:', error);
+          // Provide fallback choices on any error
           controller.enqueue(JSON.stringify({
             type: 'choices',
-            content: choices.choices
+            content: ['Try again', 'Start over', 'Return to menu']
           }) + '\n');
         }
       }
     });
 
-    const readableStream = narrationStream.toReadableStream();
+    // Create a new readable stream with error handling
+    const readableStream = narrationStream.toReadableStream().pipeThrough(transformStream);
     
-    return new Response(readableStream.pipeThrough(transformStream), {
+    return new Response(readableStream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
@@ -105,10 +140,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in POST handler:', error);
     return new Response(
       JSON.stringify({ 
-        error: (error as Error).message || 'An error occurred during your request.' 
+        error: error instanceof Error ? error.message : 'An error occurred during your request.'
       }), 
       { status: 500 }
     );
