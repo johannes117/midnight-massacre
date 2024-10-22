@@ -10,20 +10,16 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { FloatingGhosts } from "@/components/floating-ghosts"
+import JSONAutocomplete from 'json-autocomplete'
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-interface StoryText {
-  text: string;
-  next?: string;
-}
-
 export function GameComponent() {
   const router = useRouter()
-  const [storyText, setStoryText] = useState<string | StoryText>('')
+  const [storyText, setStoryText] = useState<string>('')
   const [choices, setChoices] = useState<(string | { option: string; result: string })[]>([])
   const [isMuted, setIsMuted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -33,45 +29,65 @@ export function GameComponent() {
   ])
   const [messages, setMessages] = useState<Message[]>([])
 
-  const generateStorySegment = async (currentMessages: Message[]) => {
-    console.log('Generating story segment', currentMessages);
-    setIsLoading(true);
+  const streamStorySegment = async (currentMessages: Message[]) => {
+    setIsLoading(true)
+    setStoryText('')
+    setChoices([])
+
     try {
       const response = await fetch('/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: currentMessages }),
-      });
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to generate story segment: ${errorData.error || response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data = await response.json();
-      console.log('Received story segment', data);
-      
-      if (!data.narration || !data.choices) {
-        throw new Error('Invalid response format: missing narration or choices');
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('ReadableStream not supported')
       }
 
-      setStoryText(typeof data.narration === 'object' && 'text' in data.narration ? data.narration.text : data.narration);
-      setChoices(data.choices);
-      setMessages([...currentMessages, { role: 'assistant', content: JSON.stringify(data) }]);
+      let accumulatedData = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = new TextDecoder().decode(value)
+        accumulatedData += chunk
+
+        try {
+          const completeJsonString = JSONAutocomplete(accumulatedData)
+          const parsedJson = JSON.parse(completeJsonString)
+
+          if (parsedJson.narration) {
+            setStoryText(parsedJson.narration)
+          }
+          if (parsedJson.choices) {
+            setChoices(parsedJson.choices)
+          }
+        } catch {
+          // Ignore parsing errors for incomplete JSON
+        }
+      }
+
+      setMessages([...currentMessages, { role: 'assistant', content: accumulatedData }])
     } catch (error) {
-      console.error('Error generating story segment:', error);
-      setStoryText('An error occurred while generating the story. Please try again.');
-      setChoices([]);
+      console.error('Error streaming story segment:', error)
+      setStoryText('An error occurred while generating the story. Please try again.')
+      setChoices([])
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleStartAdventure = useCallback(async () => {
     console.log('Starting adventure')
-    setIsLoading(true)
     const initialMessage: Message = { role: 'user', content: 'Start a new spooky adventure story.' }
-    await generateStorySegment([initialMessage])
+    await streamStorySegment([initialMessage])
   }, [])
 
   useEffect(() => {
@@ -82,11 +98,10 @@ export function GameComponent() {
 
   const handleChoice = async (choice: string | { option: string; result: string }) => {
     console.log('Handling choice:', choice)
-    setIsLoading(true)
     const choiceContent = typeof choice === 'object' ? choice.option : choice
     const userMessage: Message = { role: 'user', content: `I choose: ${choiceContent}` }
     const updatedMessages = [...messages, userMessage]
-    await generateStorySegment(updatedMessages)
+    await streamStorySegment(updatedMessages)
   }
 
   return (
@@ -108,11 +123,7 @@ export function GameComponent() {
                 <Skeleton className="w-full h-full bg-orange-900/30" />
               ) : (
                 <p className="text-lg leading-relaxed text-orange-200">
-                  {typeof storyText === 'object' && 'text' in storyText
-                    ? storyText.text
-                    : typeof storyText === 'string'
-                    ? storyText
-                    : 'Loading story...'}
+                  {storyText}
                 </p>
               )}
             </ScrollArea>
