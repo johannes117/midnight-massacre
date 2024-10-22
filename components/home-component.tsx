@@ -57,9 +57,13 @@ export function HomeComponent() {
               <Button
                 variant="ghost"
                 onClick={() => router.push('/load')}
-                className="w-full h-12 text-orange-400 hover:text-orange-300 hover:bg-orange-950/50"
+                className="w-full h-12 text-orange-400 hover:text-orange-300 hover:bg-orange-950/50 relative"
+                disabled
               >
                 Continue Game
+                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-orange-500 text-black px-1 py-0.5 rounded">
+                  Coming Soon
+                </span>
               </Button>
               
               <Button
@@ -76,8 +80,9 @@ export function HomeComponent() {
               Warning: Contains scenes of horror and tension
             </div>
 
-            {/* Footer Links */}
-            <div className="flex justify-center">
+            {/* Footer Row */}
+            <div className="flex justify-between items-center w-full mt-4">
+              {/* Mute Button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -86,6 +91,11 @@ export function HomeComponent() {
               >
                 {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
               </Button>
+
+              {/* Private Beta Label */}
+              <div className="text-orange-400 text-sm font-semibold bg-orange-900/30 px-2 py-1 rounded-full">
+                Private Beta
+              </div>
             </div>
           </CardContent>
         </Card>
