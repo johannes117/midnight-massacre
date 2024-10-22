@@ -16,7 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Spooky Adventure",
+  title: "Midnight Massacre",
   description: "A thrilling interactive story experience",
 };
 
