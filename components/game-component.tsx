@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback, Suspense, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Volume2, VolumeX, Menu, Home, RotateCcw } from 'lucide-react'
+import { Volume2, VolumeX, Menu, Home } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -12,41 +12,26 @@ import { FloatingParticles } from "@/components/floating-particles"
 import SpookyLoader from './spooky-loader'
 import dynamic from 'next/dynamic'
 import { useAudioContext } from '@/components/audio-provider'
-import { GameMechanics } from '@/lib/game-mechanics'
-import type { GameState, Choice, StoryResponse, Message } from '@/lib/types'
+import { GameStatus } from './game-status'
+import { GameOver } from './game-over'
+import { GameChoices } from './game-choices'
+import { useGameLogic } from '@/hooks/useGameLogic'
 
 const SearchParamsWrapper = dynamic(() => import('@/components/search-params-wrapper'), { ssr: false })
 
-const INITIAL_GAME_STATE: GameState = {
-  survivalScore: 100,
-  hasWeapon: false,
-  hasKey: false,
-  tension: 0,
-  encounterCount: 0,
-  stalkerPresence: 'distant',
-  statusEffects: [],
-  environmentalModifiers: {
-    darkness: 0,
-    noise: 0,
-    weather: 0
-  },
-  companions: [
-    { name: 'Alex', status: 'alive' },
-    { name: 'Jamie', status: 'alive' },
-    { name: 'Casey', status: 'alive' }
-  ]
-};
-
 export function GameComponent() {
   const router = useRouter()
-  const [storySegment, setStorySegment] = useState<StoryResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const { isMuted, toggleMute } = useAudioContext()
-  const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isGameOver, setIsGameOver] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [actionOutcome, setActionOutcome] = useState<string | null>(null)
+  const {
+    storySegment,
+    isLoading,
+    gameState,
+    isGameOver,
+    handleChoice,
+    resetGame,
+    actionOutcome
+  } = useGameLogic()
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -57,157 +42,6 @@ export function GameComponent() {
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
-
-  const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
-    setIsLoading(true);
-    
-    try {
-      const response = await fetch('/api/generate-story', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: currentMessages,
-          gameState 
-        }),
-      });
-  
-      const data: StoryResponse = await response.json();
-      
-      // Check game over conditions
-      const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
-      if (isOver) {
-        setIsGameOver(true);
-        if (ending === 'death') {
-          data.story = `${data.story}\n\nYour survival score reached zero. Game Over.`;
-        } else if (ending === 'caught') {
-          data.story = `${data.story}\n\nThe Stalker caught up with you. Game Over.`;
-        } else if (ending === 'victory') {
-          data.story = `${data.story}\n\nYou managed to escape! Victory!`;
-        }
-      }
-      
-      setStorySegment(data);
-      setGameState(data.gameState);
-      setMessages(prevMessages => [...prevMessages, {
-        role: 'assistant',
-        content: JSON.stringify(data)
-      }]);
-    } catch (error) {
-      console.error('Error fetching story segment:', error);
-      setStorySegment({
-        story: 'The Stalker draws near... Perhaps we should try a different path?',
-        choices: [
-          {
-            text: 'Run and hide',
-            dc: 12,
-            riskFactor: -10,
-            rewardValue: 15,
-            type: 'stealth'
-          },
-          {
-            text: 'Look for another way',
-            dc: 10,
-            riskFactor: -5,
-            rewardValue: 10,
-            type: 'search'
-          },
-          {
-            text: 'Face your fate',
-            dc: 15,
-            riskFactor: -20,
-            rewardValue: 20,
-            type: 'combat'
-          }
-        ],
-        gameState: INITIAL_GAME_STATE
-      });
-    } finally {
-      setIsLoading(false);
-      setActionOutcome(null);
-    }
-  }, [gameState]);
-
-  const resetGame = useCallback(() => {
-    setGameState(INITIAL_GAME_STATE);
-    setMessages([]);
-    setIsGameOver(false);
-    setActionOutcome(null);
-    const initialMessage: Message = { 
-      role: 'user', 
-      content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
-    };
-    fetchStorySegment([initialMessage]);
-  }, [fetchStorySegment]);
-
-  const handleChoice = useCallback(async (choice: Choice) => {
-    // Resolve the action using game mechanics
-    const { success, newGameState, outcomeText } = GameMechanics.resolveAction(choice, gameState);
-    setActionOutcome(outcomeText);
-    setGameState(newGameState);
-
-    // Modify message based on success/failure
-    const userMessage: Message = { 
-      role: 'user', 
-      content: `I choose: ${choice.text}. ${success ? 'Successfully ' : 'Failed to '}${choice.text.toLowerCase()}. ${outcomeText}` 
-    };
-    const updatedMessages = [...messages, userMessage];
-    await fetchStorySegment(updatedMessages);
-  }, [messages, gameState, fetchStorySegment]);
-
-  const renderGameOver = useCallback(() => {
-    const isVictory = storySegment?.story.toLowerCase().includes('victory') || 
-                     storySegment?.story.toLowerCase().includes('escaped');
-    
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="w-full space-y-4 text-center"
-      >
-        <h2 className={`text-3xl font-bold ${isVictory ? 'text-green-500' : 'text-orange-500'}`}>
-          {isVictory ? 'You Survived!' : 'Game Over'}
-        </h2>
-        <div className="flex justify-center gap-4">
-          <Button
-            onClick={resetGame}
-            className="bg-orange-900/50 hover:bg-orange-800/70 text-orange-100"
-          >
-            <RotateCcw className="h-5 w-5 mr-2" />
-            Try Again
-          </Button>
-          <Button
-            onClick={() => router.push('/')}
-            className="bg-orange-900/50 hover:bg-orange-800/70 text-orange-100"
-          >
-            <Home className="h-5 w-5 mr-2" />
-            Main Menu
-          </Button>
-        </div>
-      </motion.div>
-    );
-  }, [storySegment?.story, resetGame, router]);
-
-  const handleSearchParams = useCallback((searchParams: URLSearchParams) => {
-    const startGame = searchParams.get('start') === 'true';
-    if (startGame && messages.length === 0) {
-      const initialMessage: Message = { 
-        role: 'user', 
-        content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
-      };
-      return initialMessage;
-    } else if (messages.length === 0) {
-      router.push('/');
-    }
-    return null;
-  }, [router, messages]);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const initialMessage = handleSearchParams(searchParams);
-    if (initialMessage) {
-      fetchStorySegment([initialMessage]);
-    }
-  }, [handleSearchParams, fetchStorySegment]);
 
   useEffect(() => {
     const updateViewportHeight = () => {
@@ -236,22 +70,7 @@ export function GameComponent() {
         className="flex flex-col h-full"
       >
         <CardContent className={`flex flex-col ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} p-4 overflow-hidden`}>
-          {/* Status Effects Banner */}
-          <div className="text-orange-400 text-sm text-center pb-2 border-b border-orange-800/20 space-y-1">
-            {gameState.survivalScore <= 50 && (
-              <div className="text-red-500 font-bold">CRITICAL CONDITION!</div>
-            )}
-            {gameState.hasWeapon && <div>You are armed</div>}
-            {gameState.hasKey && <div>You have found a key</div>}
-            {gameState.statusEffects.length > 0 && (
-              <div>{gameState.statusEffects.join(', ')}</div>
-            )}
-            {actionOutcome && (
-              <div className={actionOutcome.includes('Success') ? 'text-green-500' : 'text-red-500'}>
-                {actionOutcome}
-              </div>
-            )}
-          </div>
+          <GameStatus gameState={gameState} actionOutcome={actionOutcome} />
           
           <ScrollArea className={`
             flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-orange-800/50
@@ -268,22 +87,20 @@ export function GameComponent() {
 
           {!isLoading && storySegment && (
             <div className={`
-              flex flex-col gap-4 
               ${isMobile ? 'h-[45vh] overflow-y-auto mt-3' : 'mt-6'}
             `}>
-              {isGameOver ? renderGameOver() : (
-                storySegment.choices.map((choice, index) => (
-                  <Button
-                    key={index}
-                    onClick={() => handleChoice(choice)}
-                    className="w-full bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out flex flex-col items-center justify-center min-h-[4rem]"
-                    disabled={isLoading}
-                  >
-                    <span className="text-base sm:text-lg font-medium leading-tight break-words choice-text text-center">
-                      {choice.text}
-                    </span>
-                  </Button>
-                ))
+              {isGameOver ? (
+                <GameOver 
+                  isVictory={storySegment?.story.toLowerCase().includes('victory') || 
+                             storySegment?.story.toLowerCase().includes('escaped')}
+                  resetGame={resetGame}
+                />
+              ) : (
+                <GameChoices 
+                  choices={storySegment.choices}
+                  handleChoice={handleChoice}
+                  isLoading={isLoading}
+                />
               )}
             </div>
           )}
@@ -357,18 +174,16 @@ export function GameComponent() {
       </div>
 
       <div className={`flex-1 ${!isMobile && 'flex items-center justify-center p-4'}`}>
-        <Suspense fallback={<SpookyLoader />}>
         <SearchParamsWrapper>
-            {() => (
-              <Card className={`
-                bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden
-                ${isMobile ? 'h-full rounded-none' : 'w-full max-w-2xl'}
-              `}>
-                {renderGameContent()}
-              </Card>
-            )}
-          </SearchParamsWrapper>
-        </Suspense>
+          {() => (
+            <Card className={`
+              bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden
+              ${isMobile ? 'h-full rounded-none' : 'w-full max-w-2xl'}
+            `}>
+              {renderGameContent()}
+            </Card>
+          )}
+        </SearchParamsWrapper>
       </div>
     </div>
   );
