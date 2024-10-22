@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { FloatingGhosts } from "@/components/floating-ghosts"
 import SpookyLoader from './spooky-loader'
 import dynamic from 'next/dynamic'
+import { useAudioContext } from '@/components/audio-provider'
 
 const SearchParamsWrapper = dynamic(() => import('@/components/search-params-wrapper'), { ssr: false })
 
@@ -43,7 +44,7 @@ export function GameComponent() {
   const router = useRouter()
   const [storySegment, setStorySegment] = useState<StoryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
+  const { isMuted, toggleMute } = useAudioContext()
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE)
   const [messages, setMessages] = useState<Message[]>([])
   const [isGameOver, setIsGameOver] = useState(false)
@@ -239,7 +240,7 @@ export function GameComponent() {
         variant="ghost"
         size="icon"
         className="absolute top-4 right-4 text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
-        onClick={() => setIsMuted(!isMuted)}
+        onClick={toggleMute}
       >
         {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
       </Button>

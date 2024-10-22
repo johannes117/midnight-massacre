@@ -1,16 +1,16 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { Skull, Github, Volume2, VolumeX } from 'lucide-react'
 import { FloatingGhosts } from "@/components/floating-ghosts"
+import { useAudioContext } from '@/components/audio-provider'
 
 export function HomeComponent() {
   const router = useRouter()
-  const [isMuted, setIsMuted] = useState(false)
+  const { isMuted, toggleMute } = useAudioContext()
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -82,7 +82,7 @@ export function HomeComponent() {
                 variant="ghost"
                 size="icon"
                 className="text-orange-400 hover:text-orange-300"
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={toggleMute}
               >
                 {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
               </Button>
