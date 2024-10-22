@@ -277,9 +277,6 @@ export function GameComponent() {
                     <span className="text-base sm:text-lg font-medium leading-tight break-words choice-text text-center">
                       {choice.text}
                     </span>
-                    <span className="text-sm text-orange-300/80">
-                      Risk: -{choice.riskFactor} | Reward: +{choice.rewardValue}
-                    </span>
                   </Button>
                 ))
               )}
