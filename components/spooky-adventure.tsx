@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Ghost, Skull, Settings, Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, User } from 'lucide-react'
+import { Skull, Settings, Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, User } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -94,35 +94,35 @@ export function SpookyAdventureComponent() {
   console.log('Rendering, screen:', screen, 'isLoading:', isLoading)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
+    <div className="min-h-screen h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
       <FloatingGhosts />
       
-      <Card className="w-full max-w-2xl bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden">
+      <Card className="w-full max-w-2xl h-[calc(100vh-2rem)] bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
         <AnimatePresence mode="wait">
           {screen === 'home' && (
-            console.log('Rendering home screen'),
             <motion.div
               key="home"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="flex flex-col h-full"
             >
               <CardHeader>
                 <CardTitle className="text-5xl font-bold text-orange-500 text-center">
                   Spooky Adventure
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col items-center p-6 space-y-6">
-                <p className="text-lg text-center mb-6 text-orange-300">
-                  &ldquo;Dare to explore the haunted mansion and uncover its chilling secrets...&rdquo;
+              <CardContent className="flex-grow flex flex-col justify-center items-center p-6 space-y-6">
+                <p className="text-lg text-center text-orange-200">
+                  Embark on a thrilling journey through haunted realms and mysterious landscapes.
+                  Are you brave enough to face the unknown?
                 </p>
                 <Button 
                   onClick={handleStartAdventure}
-                  className="w-64 h-16 text-xl bg-orange-700 hover:bg-orange-600 text-white font-bold rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-orange-500/50 hover:shadow-lg"
+                  className="text-xl py-6 px-8 bg-orange-700 hover:bg-orange-600 text-white"
                 >
                   Begin Your Adventure
-                  <Ghost className="ml-2 h-6 w-6" />
                 </Button>
               </CardContent>
               <CardFooter className="flex justify-center space-x-4">
@@ -147,9 +147,10 @@ export function SpookyAdventureComponent() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="flex flex-col h-full"
             >
-              <CardContent className="flex flex-col items-center p-6 space-y-6">
-                <ScrollArea className="w-full h-64 p-4 bg-black/30 rounded-lg shadow-inner border border-orange-800/50">
+              <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
+                <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-orange-800/50">
                   {isLoading ? (
                     <Skeleton className="w-full h-full bg-orange-900/30" />
                   ) : (
