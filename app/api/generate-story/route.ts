@@ -2,7 +2,6 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { NextRequest } from 'next/server';
-import { GameMechanics } from '@/lib/game-mechanics';
 import type { GameState, Choice, StoryResponse, Message } from '@/lib/types';
 
 const openai = new OpenAI({
@@ -18,6 +17,57 @@ The player starts with three friends:
 2. Jamie: The tech whiz, always has the latest gadgets.
 3. Casey: The athlete, quick reflexes and protective.
 
+DIFFICULTY CHECK (DC) AND REWARD SYSTEM:
+When creating choices, assign DCs and rewards based on these guidelines:
+
+EASY (DC 5-8): Safe actions with low risk
+- DC: 5-8
+- Risk Factor: -5 to -10
+- Reward Value: 5-10
+Examples:
+- Hiding in obvious, secure locations
+- Basic searching in safe areas
+- Using clearly marked paths
+- Interacting with trusted companions
+
+MEDIUM (DC 9-12): Moderate risk actions
+- DC: 9-12
+- Risk Factor: -10 to -15
+- Reward Value: 10-15
+Examples:
+- Sneaking past distant threats
+- Searching uncertain areas
+- Basic investigation
+- Climbing through windows
+- Quick dashes between cover
+
+HARD (DC 13-16): Risky actions
+- DC: 13-16
+- Risk Factor: -15 to -20
+- Reward Value: 15-20
+Examples:
+- Confrontations with the Stalker
+- Moving through exposed areas
+- Complex athletics (climbing drainpipes)
+- Fighting regular enemies
+- Precise timing challenges
+
+DEADLY (DC 17-20): Extremely dangerous actions
+- DC: 17-20
+- Risk Factor: -20 to -30
+- Reward Value: 20-25
+Examples:
+- Direct combat with the Stalker
+- Very exposed movements
+- Desperate measures
+- Nearly impossible feats
+
+Consider these factors when setting DCs:
+1. Is the action risky? (+3-5 to DC)
+2. Is the player exposed? (+2-4 to DC)
+3. Does the player have an advantage? (-2-4 from DC)
+4. Current stalker presence level (higher = harder)
+
 Theme requirements:
 1. Use classic slasher tropes and locations creatively
 2. Include subtle references to iconic horror movies
@@ -29,17 +79,19 @@ Theme requirements:
 8. Allow player to interact with their friends through choices
 9. Friends can be killed off by the Stalker as the story progresses
 
+Important: Always provide exactly 3 choices.
+
 RESPOND ONLY WITH VALID JSON in the following format:
 {
   "story": "Your vivid story text here...",
   "choices": [
     {
       "text": "Choice description",
-      "dc": number between 1-20,
-      "riskFactor": number between -30 and -5,
-      "rewardValue": number between 5 and 20,
+      "dc": number based on difficulty guidelines above,
+      "riskFactor": matching risk factor based on DC,
+      "rewardValue": matching reward value based on DC,
       "type": "combat" OR "stealth" OR "escape" OR "search" OR "interact",
-      "logic": "Explanation of choice mechanics"
+      "logic": "Explanation of choice mechanics and why you chose this DC"
     }
   ],
   "gameState": {
@@ -62,86 +114,15 @@ RESPOND ONLY WITH VALID JSON in the following format:
       }
     ]
   }
-}
-
-Story requirements:
-1. Write 2-3 vivid paragraphs that:
-   - Build tension through environmental details (crackling leaves, distant screams, Halloween decorations moving in the wind)
-   - Include rich sensory information (focusing on sound and limited visibility)
-   - Reflect the current stalker presence level through environmental cues:
-     * distant: subtle hints (shadowy movement, faint footsteps)
-     * hunting: growing dread (knockings, doors closing)
-     * closingIn: immediate danger (heavy breathing, closer footsteps)
-     * imminent: face to face confrontation
-   - Acknowledge player's previous choices and status
-   - Incorporate classic slasher movie elements and settings
-   - Include interactions with or status updates about the player's companions
-
-Choice requirements:
-1. Provide EXACTLY three choices that feel authentic to the genre:
-   - Combat should involve improvised weapons and desperate situations
-   - Stealth should utilize classic hiding spots (closets, under beds, behind curtains)
-   - Escape should involve tense chase scenarios
-   - Search should discover both useful items and disturbing scenes
-   - Interact should allow communication or cooperation with companions
-2. Adjust difficulty based on:
-   - Low survival score (<50): offer lower-risk options
-   - High stalker presence: increase stakes and urgency
-   - Available items: provide tactical options
-   - Active status effects: reflect in choices
-   - Companion status: offer choices to help or be helped by companions
-3. Each choice should feel like a decision a horror movie character would make`;
-
-
-function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
-  let adjustedDC = choice.dc;
-  
-  let totalModifier = 0;
-  
-  const environmentalMod = GameMechanics.calculateEnvironmentalModifiers(gameState);
-  const statusMod = GameMechanics.calculateStatusModifiers(gameState, choice.type);
-  const stalkerMod = GameMechanics.calculateStalkerModifier(gameState.stalkerPresence);
-  const encounterMod = Math.min(2, Math.floor(gameState.encounterCount / 3));
-
-  totalModifier += environmentalMod;
-  totalModifier += statusMod;
-  totalModifier += stalkerMod;
-  totalModifier += encounterMod;
-
-  if (gameState.survivalScore < 50) {
-    totalModifier += 1; // Make it slightly easier when survival score is low
-  }
-
-  // Cap the total modifier
-  totalModifier = Math.max(-5, Math.min(5, totalModifier));
-
-  // Adjust the DC based on the total modifier
-  adjustedDC = Math.max(1, Math.min(20, adjustedDC - totalModifier));
-
-  console.log(`Choice Difficulty Adjustment:
-    Original DC: ${choice.dc}
-    Environmental Modifier: ${environmentalMod}
-    Status Modifier: ${statusMod}
-    Stalker Modifier: ${stalkerMod}
-    Encounter Modifier: ${encounterMod}
-    Low Survival Score Modifier: ${gameState.survivalScore < 50 ? 1 : 0}
-    Total Modifier: ${totalModifier}
-    Adjusted DC: ${adjustedDC}
-  `);
-
-  return {
-    ...choice,
-    dc: adjustedDC
-  };
-}
+}`;
 
 function validateChoices(choices: Choice[]): Choice[] {
   return choices.map(choice => ({
     ...choice,
     dc: Math.min(20, Math.max(1, choice.dc)),
     riskFactor: Math.min(-5, Math.max(-30, choice.riskFactor)),
-    rewardValue: Math.min(20, Math.max(5, choice.rewardValue)),
-    type: ['combat', 'stealth', 'escape', 'search'].includes(choice.type) ? 
+    rewardValue: Math.min(25, Math.max(5, choice.rewardValue)),
+    type: ['combat', 'stealth', 'escape', 'search', 'interact'].includes(choice.type) ? 
       choice.type : 'search'
   }));
 }
@@ -152,9 +133,9 @@ function generateFallbackResponse(): StoryResponse {
     choices: [
       {
         text: "Hide in the nearest room",
-        dc: 12,
+        dc: 7,
         riskFactor: -10,
-        rewardValue: 15,
+        rewardValue: 10,
         type: 'stealth',
         logic: "Basic stealth option with moderate risk/reward"
       },
@@ -162,15 +143,15 @@ function generateFallbackResponse(): StoryResponse {
         text: "Make a run for it",
         dc: 14,
         riskFactor: -20,
-        rewardValue: 20,
+        rewardValue: 15,
         type: 'escape',
         logic: "High-risk escape attempt"
       },
       {
         text: "Search for anything useful",
-        dc: 10,
+        dc: 8,
         riskFactor: -5,
-        rewardValue: 10,
+        rewardValue: 8,
         type: 'search',
         logic: "Low-risk search option"
       }
@@ -211,8 +192,8 @@ export async function POST(req: NextRequest) {
       gameState: GameState;
     };
 
-    const gameStatePrompt = `Current game state (INCLUDE THIS INFORMATION IN YOUR RESPONSE JSON):
-- Survival Score: ${gameState.survivalScore}
+    const gameStatePrompt = `Current game state (USE THIS TO INFORM YOUR CHOICE DIFFICULTY):
+- Survival Score: ${gameState.survivalScore}${gameState.survivalScore < 50 ? ' (CRITICAL!)' : ''}
 - Stalker Presence: ${gameState.stalkerPresence}
 - Status Effects: ${gameState.statusEffects.join(', ') || 'none'}
 - Items: ${[
@@ -220,7 +201,14 @@ export async function POST(req: NextRequest) {
     gameState.hasKey && 'key'
   ].filter(Boolean).join(', ') || 'none'}
 - Tension: ${gameState.tension}/10
-- Encounters: ${gameState.encounterCount}`;
+- Encounters: ${gameState.encounterCount}
+
+Consider these conditions when setting DCs and risk factors. Remember:
+- Low survival score should encourage including some safer options
+- Higher stalker presence should increase DCs
+- Status effects should influence available choices
+- Equipment should unlock new possibilities
+- Always match risk factors and reward values to the DC level using the guidelines above`;
 
     const apiMessages: ChatCompletionMessageParam[] = [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -242,22 +230,18 @@ export async function POST(req: NextRequest) {
       const content = completion.choices[0]?.message?.content || '{}';
       response = JSON.parse(content);
 
-      // Validate response structure
       if (!response.story || !Array.isArray(response.choices) || !response.gameState) {
         throw new Error('Invalid response structure');
       }
 
-      // Validate and adjust choices
       if (response.choices.length !== 3) {
         throw new Error('Invalid number of choices');
       }
 
+      // Validate and adjust choices
       response.choices = validateChoices(response.choices);
-      response.choices = response.choices.map(choice => 
-        adjustChoiceDifficulty(choice, gameState)
-      );
 
-      // Ensure game state consistency
+      // Update game state while preserving current values
       response.gameState = {
         ...gameState,
         ...response.gameState,
