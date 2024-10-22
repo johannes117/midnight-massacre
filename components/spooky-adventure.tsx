@@ -15,11 +15,16 @@ interface Message {
   content: string;
 }
 
+interface StoryText {
+  text: string;
+  next?: string;
+}
+
 export function SpookyAdventureComponent() {
   console.log('Component rendering')
 
   const [screen, setScreen] = useState('home')
-  const [storyText, setStoryText] = useState('')
+  const [storyText, setStoryText] = useState<string | StoryText>('')
   const [choices, setChoices] = useState<string[]>([])
   const [isMuted, setIsMuted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -51,7 +56,7 @@ export function SpookyAdventureComponent() {
         throw new Error('Invalid response format: missing narration or choices');
       }
 
-      setStoryText(typeof data.narration === 'object' ? JSON.stringify(data.narration, null, 2) : data.narration);
+      setStoryText(data.narration);
       setChoices(data.choices);
       setMessages([...currentMessages, { role: 'assistant', content: JSON.stringify(data) }]);
     } catch (error) {
@@ -155,7 +160,7 @@ export function SpookyAdventureComponent() {
                     <Skeleton className="w-full h-full bg-orange-900/30" />
                   ) : (
                     <p className="text-lg leading-relaxed text-orange-200">
-                      {typeof storyText === 'object' ? JSON.stringify(storyText, null, 2) : storyText}
+                      {typeof storyText === 'object' && 'text' in storyText ? storyText.text : storyText}
                     </p>
                   )}
                 </ScrollArea>
