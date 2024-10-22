@@ -3,70 +3,116 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skull } from 'lucide-react'
+import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
+import { Skull, Github, Volume2, VolumeX } from 'lucide-react'
 import { FloatingGhosts } from "@/components/floating-ghosts"
 
 export function HomeComponent() {
   const router = useRouter()
-  const [savedGames] = useState<{ title: string; date: string }[]>([
-    { title: "The Haunted Mansion", date: "2023-10-31" },
-    { title: "The Whispering Woods", date: "2023-11-01" }
-  ])
-
-  const handleStartAdventure = () => {
-    router.push('/game?start=true')
-  }
-
-  const handleLoadGame = () => {
-    console.log('Loading game:', savedGames[0].title)
-    router.push('/game')
-  }
-
+  const [isMuted, setIsMuted] = useState(false)
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
+    <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <FloatingGhosts />
       
-      <Card className="w-full max-w-2xl bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden">
-        <motion.div
-          key="home"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <CardHeader>
-            <CardTitle className="text-4xl sm:text-5xl font-bold text-orange-500 text-center">
-              Spooky Adventure
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col justify-center items-center p-6 space-y-6">
-            <p className="text-lg text-center text-orange-200">
-              Embark on a thrilling journey through haunted realms and mysterious landscapes.
-              Are you brave enough to face the unknown?
-            </p>
-            <Button 
-              onClick={handleStartAdventure}
-              className="text-xl py-4 px-6 bg-orange-700 hover:bg-orange-600 text-white"
-            >
-              Begin Your Adventure
-            </Button>
-          </CardContent>
-          <CardFooter className="flex justify-center space-x-4 pb-6">
-            {savedGames.length > 0 && (
-              <Button 
-                variant="outline" 
-                className="text-orange-400 hover:text-orange-300 bg-black/50 border-orange-700 hover:bg-orange-950 transition-colors"
-                onClick={handleLoadGame}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center z-10"
+      >
+        <Card className="bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm w-full max-w-md mx-auto">
+          <CardContent className="p-6 flex flex-col items-center space-y-8">
+            {/* Title Section */}
+            <div className="space-y-4">
+              <motion.div
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
               >
-                <Skull className="mr-2 h-5 w-5" />
-                Load Game - {savedGames[0].title}
+                <Skull className="w-16 h-16 text-orange-500 mx-auto" />
+              </motion.div>
+              <h1 className="text-4xl font-bold text-orange-500 font-horror tracking-wider">
+                MIDNIGHT MASSACRE
+              </h1>
+              <p className="text-orange-300 text-lg">
+                Survive The Night. Beat The Mask.
+              </p>
+            </div>
+
+            {/* Main Menu Options */}
+            <div className="w-full space-y-4">
+              <Button
+                onClick={() => router.push('/game?start=true')}
+                className="w-full h-12 bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-orange-500/30 hover:shadow-lg"
+              >
+                Start New Game
               </Button>
-            )}
-          </CardFooter>
-        </motion.div>
-      </Card>
+              
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/load')}
+                className="w-full h-12 text-orange-400 hover:text-orange-300 hover:bg-orange-950/50"
+              >
+                Continue Game
+              </Button>
+              
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/tutorial')}
+                className="w-full h-12 text-orange-400 hover:text-orange-300 hover:bg-orange-950/50"
+              >
+                How to Play
+              </Button>
+            </div>
+
+            {/* Warning Text */}
+            <div className="text-orange-400/70 text-sm italic border-t border-orange-800/50 pt-4">
+              Warning: Contains scenes of horror and tension
+            </div>
+
+            {/* Footer Links */}
+            <div className="flex justify-center space-x-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-orange-400 hover:text-orange-300"
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+              </Button>
+              
+              <a
+                href="https://github.com/yourusername/midnight-massacre"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-orange-400 hover:text-orange-300"
+                >
+                  <Github className="h-6 w-6" />
+                </Button>
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Atmospheric Overlay */}
+      <div className="fixed inset-0 bg-gradient-radial from-transparent to-black/50 pointer-events-none" />
+      
+      {/* Optional: Add fog/mist animation */}
+      <div className="fixed inset-0 bg-repeat-y animate-fog pointer-events-none opacity-30" 
+           style={{
+             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+           }} />
     </div>
   )
 }
