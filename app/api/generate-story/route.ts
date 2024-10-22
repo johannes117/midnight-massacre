@@ -40,5 +40,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: (error as Error).message || 'An error occurred during your request.' }, { status: 500 });
   }
 }
-
-export default POST;
