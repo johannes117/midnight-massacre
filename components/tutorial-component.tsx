@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import { ArrowLeft, Skull, Key, Sword, Ghost, Heart, Brain } from "lucide-react";
-import { FloatingGhosts } from "@/components/floating-ghosts";
+import { FloatingParticles } from "@/components/floating-particles";
 
 export default function TutorialComponent() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function TutorialComponent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-900 via-black to-purple-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <FloatingGhosts />
+      <FloatingParticles />
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}

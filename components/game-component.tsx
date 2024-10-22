@@ -8,7 +8,7 @@ import { Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, RotateCcw, Home } from
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
-import { FloatingGhosts } from "@/components/floating-ghosts"
+import { FloatingParticles } from "@/components/floating-particles"
 import SpookyLoader from './spooky-loader'
 import dynamic from 'next/dynamic'
 import { useAudioContext } from '@/components/audio-provider'
@@ -185,7 +185,7 @@ export function GameComponent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-900 via-black to-purple-900 text-red-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
-      <FloatingGhosts />
+      <FloatingParticles />
       
       <Suspense fallback={<SpookyLoader />}>
         <SearchParamsWrapper>

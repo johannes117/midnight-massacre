@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { Skull, Volume2, VolumeX } from 'lucide-react'
-import { FloatingGhosts } from "@/components/floating-ghosts"
+import { FloatingParticles } from "@/components/floating-particles"
 import { useAudioContext } from '@/components/audio-provider'
 
 export function HomeComponent() {
@@ -14,7 +14,7 @@ export function HomeComponent() {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <FloatingGhosts />
+      <FloatingParticles />
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}
