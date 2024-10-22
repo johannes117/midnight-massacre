@@ -142,7 +142,7 @@ export function GameComponent() {
                   <span className="line-clamp-2 flex-grow">
                     {typeof choice === 'string'
                       ? choice
-                      : (choice && choice.option) || (isLoading ? 'Loading...' : 'Waiting for options...')}
+                      : choice?.option || (isLoading ? 'Loading...' : 'Waiting for options...')}
                   </span>
                   <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
                 </Button>
