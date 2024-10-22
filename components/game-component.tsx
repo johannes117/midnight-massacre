@@ -3,8 +3,8 @@
 import { useState, useCallback, Suspense, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, RotateCcw, Home } from 'lucide-react'
+import { Card, CardContent } from "@/components/ui/card"
+import { Volume2, VolumeX, ChevronRight, Menu, Home, RotateCcw } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -48,6 +48,17 @@ export function GameComponent() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE)
   const [messages, setMessages] = useState<Message[]>([])
   const [isGameOver, setIsGameOver] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px is the standard tablet breakpoint
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
@@ -180,6 +191,65 @@ export function GameComponent() {
     };
   }, []);
 
+  const renderGameContent = () => (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={storySegment?.story || 'loading'}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col h-full"
+      >
+        <CardContent className={`flex flex-col ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} p-4 overflow-hidden`}>
+          {gameState.hasWeapon && (
+            <div className="text-red-400 text-sm text-center pb-2 border-b border-red-800/20">
+              You are armed
+            </div>
+          )}
+          
+          {/* Scrollable story area */}
+          <ScrollArea className={`
+            flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-red-800/50
+            ${isMobile ? 'h-[45vh]' : 'max-h-[60vh]'}
+          `}>
+            {isLoading ? (
+              <SpookyLoader />
+            ) : (
+              <p className="text-base sm:text-lg leading-relaxed text-red-200">
+                {storySegment?.story}
+              </p>
+            )}
+          </ScrollArea>
+
+          {/* Action buttons container */}
+          {!isLoading && storySegment && (
+            <div className={`
+              flex flex-col gap-2 
+              ${isMobile ? 'h-[45vh] overflow-y-auto mt-2' : 'mt-4'}
+            `}>
+              {isGameOver ? renderGameOver() : (
+                storySegment.choices.map((choice, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => handleChoice(choice)}
+                    className="w-full min-h-[3rem] bg-red-900/50 hover:bg-red-800/70 text-red-100 px-4 rounded-lg transition-all duration-300 ease-in-out text-left flex items-center gap-3 group"
+                    disabled={isLoading}
+                  >
+                    <span className="flex-grow text-sm sm:text-base font-medium leading-tight">
+                      {choice}
+                    </span>
+                    <ChevronRight className="h-5 w-5 flex-shrink-0 opacity-75 group-hover:opacity-100 transition-opacity" />
+                  </Button>
+                ))
+              )}
+            </div>
+          )}
+        </CardContent>
+      </motion.div>
+    </AnimatePresence>
+  );
+
   return (
     <div 
       className="fixed inset-0 bg-gradient-to-b from-red-900 via-black to-purple-900 text-red-100 flex flex-col"
@@ -209,6 +279,15 @@ export function GameComponent() {
                 gameState.hasKey && 'Key'
               ].filter(Boolean).join(', ') || 'None'}</div>
               <div>Encounters: {gameState.encounterCount}</div>
+              <hr className="border-red-800/30" />
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/')}
+                className="w-full text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50"
+              >
+                <Home className="h-5 w-5 mr-2" />
+                Give Up
+              </Button>
             </div>
           </SheetContent>
         </Sheet>
@@ -228,75 +307,16 @@ export function GameComponent() {
       </div>
 
       {/* Main game content */}
-      <div className="flex-1 overflow-hidden">
+      <div className={`flex-1 ${!isMobile && 'flex items-center justify-center p-4'}`}>
         <Suspense fallback={<SpookyLoader />}>
           <SearchParamsWrapper>
             {() => (
-              <div className="h-full">
-                <Card className="h-full bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col rounded-none">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={storySegment?.story || 'loading'}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex flex-col h-full"
-                    >
-                      <CardContent className="flex flex-col flex-grow p-4 space-y-4 overflow-hidden">
-                        {gameState.hasWeapon && (
-                          <div className="text-red-400 text-sm text-center pb-2 border-b border-red-800/20">
-                            You are armed
-                          </div>
-                        )}
-                        
-                        {/* Scrollable story area - Reduced max-height */}
-                        <ScrollArea className="flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-red-800/50 max-h-[40vh]">
-                          {isLoading ? (
-                            <SpookyLoader />
-                          ) : (
-                            <p className="text-base sm:text-lg leading-relaxed text-red-200">
-                              {storySegment?.story}
-                            </p>
-                          )}
-                        </ScrollArea>
-
-                        {/* Action buttons container - Removed max-height and overflow */}
-                        {!isLoading && storySegment && (
-                          <div className="flex flex-col gap-2 mt-4">
-                            {isGameOver ? renderGameOver() : (
-                              storySegment.choices.map((choice, index) => (
-                                <Button
-                                  key={index}
-                                  onClick={() => handleChoice(choice)}
-                                  className="w-full min-h-[3rem] bg-red-900/50 hover:bg-red-800/70 text-red-100 px-4 rounded-lg transition-all duration-300 ease-in-out text-left flex items-center gap-3 group"
-                                  disabled={isLoading}
-                                >
-                                  <span className="flex-grow text-sm sm:text-base font-medium leading-tight">
-                                    {choice}
-                                  </span>
-                                  <ChevronRight className="h-5 w-5 flex-shrink-0 opacity-75 group-hover:opacity-100 transition-opacity" />
-                                </Button>
-                              ))
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                      
-                      <CardFooter className="p-4 border-t border-red-800/30 bg-black/20">
-                        <Button
-                          variant="ghost"
-                          onClick={() => router.push('/')}
-                          className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50"
-                        >
-                          <ArrowLeft className="h-5 w-5 mr-2" />
-                          Give Up
-                        </Button>
-                      </CardFooter>
-                    </motion.div>
-                  </AnimatePresence>
-                </Card>
-              </div>
+              <Card className={`
+                bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden
+                ${isMobile ? 'h-full rounded-none' : 'w-full max-w-2xl'}
+              `}>
+                {renderGameContent()}
+              </Card>
             )}
           </SearchParamsWrapper>
         </Suspense>
