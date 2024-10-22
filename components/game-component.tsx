@@ -129,20 +129,20 @@ export function GameComponent() {
         animate={{ opacity: 1 }}
         className="w-full space-y-4 text-center"
       >
-        <h2 className={`text-3xl font-bold ${isVictory ? 'text-green-500' : 'text-red-500'}`}>
+        <h2 className={`text-3xl font-bold ${isVictory ? 'text-green-500' : 'text-orange-500'}`}>
           {isVictory ? 'You Survived!' : 'Game Over'}
         </h2>
         <div className="flex justify-center gap-4">
           <Button
             onClick={resetGame}
-            className="bg-red-900/50 hover:bg-red-800/70 text-red-100"
+            className="bg-orange-900/50 hover:bg-orange-800/70 text-orange-100"
           >
             <RotateCcw className="h-5 w-5 mr-2" />
             Try Again
           </Button>
           <Button
             onClick={() => router.push('/')}
-            className="bg-red-900/50 hover:bg-red-800/70 text-red-100"
+            className="bg-orange-900/50 hover:bg-orange-800/70 text-orange-100"
           >
             <Home className="h-5 w-5 mr-2" />
             Main Menu
@@ -203,20 +203,20 @@ export function GameComponent() {
       >
         <CardContent className={`flex flex-col ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} p-4 overflow-hidden`}>
           {gameState.hasWeapon && (
-            <div className="text-red-400 text-sm text-center pb-2 border-b border-red-800/20">
+            <div className="text-orange-400 text-sm text-center pb-2 border-b border-orange-800/20">
               You are armed
             </div>
           )}
           
           {/* Scrollable story area */}
           <ScrollArea className={`
-            flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-red-800/50
+            flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-orange-800/50
             ${isMobile ? 'h-[45vh]' : 'max-h-[60vh]'}
           `}>
             {isLoading ? (
               <SpookyLoader />
             ) : (
-              <p className="text-base sm:text-lg leading-relaxed text-red-200">
+              <p className="text-base sm:text-lg leading-relaxed text-orange-200">
                 {storySegment?.story}
               </p>
             )}
@@ -233,7 +233,7 @@ export function GameComponent() {
                   <Button
                     key={index}
                     onClick={() => handleChoice(choice)}
-                    className="w-full bg-red-900/50 hover:bg-red-800/70 text-red-100 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out flex items-center justify-center min-h-[4rem]"
+                    className="w-full bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out flex items-center justify-center min-h-[4rem]"
                     disabled={isLoading}
                   >
                     <span className="text-base sm:text-lg font-medium leading-tight break-words choice-text text-center">
@@ -251,38 +251,38 @@ export function GameComponent() {
 
   return (
     <div 
-      className="fixed inset-0 bg-gradient-to-b from-red-900 via-black to-purple-900 text-red-100 flex flex-col"
+      className="fixed inset-0 bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 flex flex-col"
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
       <FloatingParticles />
       
       {/* Header with controls */}
-      <div className="w-full px-4 py-2 flex justify-between items-center bg-black/50 backdrop-blur-sm z-20 border-b border-red-800/30">
+      <div className="w-full px-4 py-2 flex justify-between items-center bg-black/50 backdrop-blur-sm z-20 border-b border-orange-800/30">
         <Sheet>
           <SheetTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
+              className="text-orange-400 hover:text-orange-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
             >
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
           
-          <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/90 border-red-800">
-            <SheetTitle className="text-lg font-semibold text-red-400 mb-4">Game Status</SheetTitle>
-            <div className="space-y-4 text-red-200">
+          <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/90 border-orange-800">
+            <SheetTitle className="text-lg font-semibold text-orange-400 mb-4">Game Status</SheetTitle>
+            <div className="space-y-4 text-orange-200">
               <div>Tension Level: {gameState.tension}/10</div>
               <div>Items Found: {[
                 gameState.hasWeapon && 'Weapon',
                 gameState.hasKey && 'Key'
               ].filter(Boolean).join(', ') || 'None'}</div>
               <div>Encounters: {gameState.encounterCount}</div>
-              <hr className="border-red-800/30" />
+              <hr className="border-orange-800/30" />
               <Button
                 variant="ghost"
                 onClick={() => router.push('/')}
-                className="w-full text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50"
+                className="w-full text-orange-400 hover:text-orange-300 bg-black/30 hover:bg-black/50"
               >
                 <Home className="h-5 w-5 mr-2" />
                 Give Up
@@ -291,14 +291,14 @@ export function GameComponent() {
           </SheetContent>
         </Sheet>
         
-        <h1 className="text-2xl sm:text-3xl font-horror text-red-500 tracking-wider text-center">
+        <h1 className="text-2xl sm:text-3xl font-horror text-orange-500 tracking-wider text-center">
           MIDNIGHT MASSACRE
         </h1>
         
         <Button
           variant="ghost"
           size="icon"
-          className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
+          className="text-orange-400 hover:text-orange-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
           onClick={toggleMute}
         >
           {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
@@ -311,7 +311,7 @@ export function GameComponent() {
           <SearchParamsWrapper>
             {() => (
               <Card className={`
-                bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden
+                bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden
                 ${isMobile ? 'h-full rounded-none' : 'w-full max-w-2xl'}
               `}>
                 {renderGameContent()}
