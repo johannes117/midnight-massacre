@@ -151,5 +151,10 @@ export const INITIAL_GAME_STATE: GameState = {
     darkness: 0,
     noise: 0,
     weather: 0
-  }
+  },
+  companions: [
+    { name: 'Alex', status: 'alive' },
+    { name: 'Jamie', status: 'alive' },
+    { name: 'Casey', status: 'alive' }
+  ]
 };

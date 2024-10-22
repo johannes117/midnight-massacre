@@ -27,6 +27,12 @@ export interface GameState {
   stalkerPresence: StalkerPresence;
   statusEffects: StatusEffect[];
   environmentalModifiers: EnvironmentalModifiers;
+  companions: Companion[];
+}
+
+export interface Companion {
+  name: string;
+  status: 'alive' | 'injured' | 'dead';
 }
 
 export interface StoryResponse {

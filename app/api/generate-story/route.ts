@@ -13,6 +13,11 @@ const SYSTEM_PROMPT = `You are crafting an interactive horror story in the style
 
 Setting: A small, isolated town on Halloween night. Think vintage Americana - abandoned high schools, dimly lit streets, foggy woods, creaky houses, and classic Halloween decorations. The atmosphere should be thick with dread and nostalgia.
 
+The player starts with three friends:
+1. Alex: The best friend, loyal and level-headed.
+2. Jamie: The tech whiz, always has the latest gadgets.
+3. Casey: The athlete, quick reflexes and protective.
+
 Theme requirements:
 1. Use classic slasher tropes and locations creatively
 2. Include subtle references to iconic horror movies
@@ -20,6 +25,9 @@ Theme requirements:
 4. Describe environmental details that evoke 80s nostalgia
 5. Build tension through sound, shadows, and glimpses of The Stalker
 6. Use weather and lighting to enhance the horror (fog, thunder, flickering lights)
+7. Start with a fun, lighthearted scene (e.g., game night) and slowly introduce danger
+8. Allow player to interact with their friends through choices
+9. Friends can be killed off by the Stalker as the story progresses
 
 RESPOND ONLY WITH VALID JSON in the following format:
 {
@@ -30,7 +38,7 @@ RESPOND ONLY WITH VALID JSON in the following format:
       "dc": number between 1-20,
       "riskFactor": number between -30 and -5,
       "rewardValue": number between 5 and 20,
-      "type": "combat" OR "stealth" OR "escape" OR "search",
+      "type": "combat" OR "stealth" OR "escape" OR "search" OR "interact",
       "logic": "Explanation of choice mechanics"
     }
   ],
@@ -46,7 +54,13 @@ RESPOND ONLY WITH VALID JSON in the following format:
       "darkness": number,
       "noise": number,
       "weather": number
-    }
+    },
+    "companions": [
+      {
+        "name": string,
+        "status": "alive" OR "injured" OR "dead"
+      }
+    ]
   }
 }
 
@@ -61,6 +75,7 @@ Story requirements:
      * imminent: face to face confrontation
    - Acknowledge player's previous choices and status
    - Incorporate classic slasher movie elements and settings
+   - Include interactions with or status updates about the player's companions
 
 Choice requirements:
 1. Provide EXACTLY three choices that feel authentic to the genre:
@@ -68,11 +83,13 @@ Choice requirements:
    - Stealth should utilize classic hiding spots (closets, under beds, behind curtains)
    - Escape should involve tense chase scenarios
    - Search should discover both useful items and disturbing scenes
+   - Interact should allow communication or cooperation with companions
 2. Adjust difficulty based on:
    - Low survival score (<50): offer lower-risk options
    - High stalker presence: increase stakes and urgency
    - Available items: provide tactical options
    - Active status effects: reflect in choices
+   - Companion status: offer choices to help or be helped by companions
 3. Each choice should feel like a decision a horror movie character would make`;
 
 
@@ -170,7 +187,12 @@ function generateFallbackResponse(): StoryResponse {
         darkness: 0,
         noise: 0,
         weather: 0
-      }
+      },
+      companions: [
+        { name: 'Alex', status: 'alive' },
+        { name: 'Jamie', status: 'alive' },
+        { name: 'Casey', status: 'alive' }
+      ]
     }
   };
 }
