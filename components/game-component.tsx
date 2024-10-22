@@ -29,7 +29,7 @@ interface StoryResponse {
 export function GameComponent() {
   const router = useRouter()
   const [storyText, setStoryText] = useState<string>('')
-  const [choices, setChoices] = useState<(string | { option: string; result: string })[]>(['', '', ''])
+  const [choices, setChoices] = useState<(string | { option: string; result: string })[] | null>(null)
   const [isMuted, setIsMuted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [savedGames] = useState<{ title: string; date: string }[]>([
@@ -41,7 +41,7 @@ export function GameComponent() {
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
     setStoryText('');
-    setChoices(['Loading...', 'Loading...', 'Loading...']);
+    setChoices(null);
     
     try {
       const response = await fetch('/api/generate-story', {
@@ -98,21 +98,24 @@ export function GameComponent() {
 
   const memoizedFloatingGhosts = useMemo(() => <FloatingGhosts />, [])
 
-  const renderChoice = useCallback((choice: string | { option: string; result: string }, index: number) => (
-    <Button
-      key={index}
-      onClick={() => handleChoice(choice)}
-      className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
-      disabled={isLoading || !choice}
-    >
-      <span className="line-clamp-2 flex-grow">
-        {typeof choice === 'string'
-          ? choice
-          : choice?.option || (isLoading ? 'Loading...' : 'Waiting for options...')}
-      </span>
-      <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
-    </Button>
-  ), [handleChoice, isLoading]);
+  const renderChoice = useCallback((choice: string | { option: string; result: string } | null, index: number) => {
+    if (!choice) return null;
+    return (
+      <Button
+        key={index}
+        onClick={() => handleChoice(choice)}
+        className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
+        disabled={isLoading}
+      >
+        <span className="line-clamp-2 flex-grow">
+          {typeof choice === 'string'
+            ? choice
+            : choice?.option || 'Waiting for options...'}
+        </span>
+        <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
+      </Button>
+    );
+  }, [handleChoice, isLoading]);
 
   const renderSavedGame = useCallback((game: { title: string; date: string }, index: number) => (
     <Button
@@ -154,9 +157,11 @@ export function GameComponent() {
                 </p>
               )}
             </ScrollArea>
-            <div className="w-full space-y-4">
-              {choices.map((choice, index) => renderChoice(choice, index))}
-            </div>
+            {!isLoading && choices && (
+              <div className="w-full space-y-4">
+                {choices.map((choice, index) => renderChoice(choice, index))}
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button
