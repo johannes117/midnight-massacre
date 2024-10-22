@@ -16,20 +16,14 @@ interface Message {
   content: string;
 }
 
-interface StoryResponse {
+interface StorySegment {
   story: string;
   choices: string[];
-  error?: string;
-  fallback?: {
-    story: string;
-    choices: string[];
-  };
 }
 
 export function GameComponent() {
   const router = useRouter()
-  const [storyText, setStoryText] = useState<string>('')
-  const [choices, setChoices] = useState<(string | { option: string; result: string })[] | null>(null)
+  const [storySegment, setStorySegment] = useState<StorySegment | null>(null)
   const [isMuted, setIsMuted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [savedGames] = useState<{ title: string; date: string }[]>([
@@ -40,8 +34,6 @@ export function GameComponent() {
 
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
-    setStoryText('');
-    setChoices(null);
     
     try {
       const response = await fetch('/api/generate-story', {
@@ -50,27 +42,19 @@ export function GameComponent() {
         body: JSON.stringify({ messages: currentMessages }),
       });
   
-      const data: StoryResponse = await response.json();
+      const data: StorySegment = await response.json();
       
-      if (data.error) {
-        const fallbackStory = data.fallback?.story || 'An error occurred while generating the story.';
-        const fallbackChoices = data.fallback?.choices || ['Try again', 'Start over', 'Return to menu'];
-        
-        setStoryText(fallbackStory);
-        setChoices(fallbackChoices);
-      } else {
-        setStoryText(data.story);
-        setChoices(data.choices);
-        
-        setMessages(prevMessages => [...prevMessages, {
-          role: 'assistant',
-          content: JSON.stringify({ story: data.story, choices: data.choices })
-        }]);
-      }
+      setStorySegment(data);
+      setMessages(prevMessages => [...prevMessages, {
+        role: 'assistant',
+        content: JSON.stringify(data)
+      }]);
     } catch (error) {
       console.error('Error fetching story segment:', error);
-      setStoryText('An error occurred while generating the story. Please try again.');
-      setChoices(['Try again', 'Start over', 'Return to menu']);
+      setStorySegment({
+        story: 'An error occurred while generating the story. Please try again.',
+        choices: ['Try again', 'Start over', 'Return to menu']
+      });
     } finally {
       setIsLoading(false);
     }
@@ -88,18 +72,16 @@ export function GameComponent() {
     }
   }, [messages, handleStartAdventure])
 
-  const handleChoice = useCallback(async (choice: string | { option: string; result: string }) => {
+  const handleChoice = useCallback(async (choice: string) => {
     console.log('Handling choice:', choice)
-    const choiceContent = typeof choice === 'object' ? choice.option : choice
-    const userMessage: Message = { role: 'user', content: `I choose: ${choiceContent}` }
+    const userMessage: Message = { role: 'user', content: `I choose: ${choice}` }
     const updatedMessages = [...messages, userMessage]
     await fetchStorySegment(updatedMessages)
   }, [messages, fetchStorySegment]);
 
   const memoizedFloatingGhosts = useMemo(() => <FloatingGhosts />, [])
 
-  const renderChoice = useCallback((choice: string | { option: string; result: string } | null, index: number) => {
-    if (!choice) return null;
+  const renderChoice = useCallback((choice: string, index: number) => {
     return (
       <Button
         key={index}
@@ -107,11 +89,7 @@ export function GameComponent() {
         className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
         disabled={isLoading}
       >
-        <span className="line-clamp-2 flex-grow">
-          {typeof choice === 'string'
-            ? choice
-            : choice?.option || 'Waiting for options...'}
-        </span>
+        <span className="line-clamp-2 flex-grow">{choice}</span>
         <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
       </Button>
     );
@@ -153,13 +131,13 @@ export function GameComponent() {
                 <SpookyLoader />
               ) : (
                 <p className="text-lg leading-relaxed text-orange-200">
-                  {storyText}
+                  {storySegment?.story}
                 </p>
               )}
             </ScrollArea>
-            {!isLoading && choices && (
+            {!isLoading && storySegment && (
               <div className="w-full space-y-4">
-                {choices.map((choice, index) => renderChoice(choice, index))}
+                {storySegment.choices.map((choice, index) => renderChoice(choice, index))}
               </div>
             )}
           </CardContent>
