@@ -233,10 +233,10 @@ export function GameComponent() {
                   <Button
                     key={index}
                     onClick={() => handleChoice(choice)}
-                    className="w-full bg-red-900/50 hover:bg-red-800/70 text-red-100 px-6 py-6 rounded-lg transition-all duration-300 ease-in-out text-left min-h-[80px] flex items-center"
+                    className="w-full bg-red-900/50 hover:bg-red-800/70 text-red-100 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out flex items-center justify-center min-h-[4rem]"
                     disabled={isLoading}
                   >
-                    <span className="text-lg sm:text-xl font-medium leading-tight break-words">
+                    <span className="text-base sm:text-lg font-medium leading-tight break-words choice-text text-center">
                       {choice}
                     </span>
                   </Button>

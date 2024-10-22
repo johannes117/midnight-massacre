@@ -114,3 +114,23 @@
 .animate-spore {
   animation: spore linear infinite;
 }
+
+.choice-text {
+  display: block;
+  word-wrap: break-word;
+  white-space: normal;
+  hyphens: auto;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .choice-text {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .choice-text {
+    font-size: 0.875rem;
+  }
+}
