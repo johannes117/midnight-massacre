@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Skull, Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, User, Settings } from 'lucide-react'
@@ -23,6 +23,7 @@ interface StorySegment {
 
 export function GameComponent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [storySegment, setStorySegment] = useState<StorySegment | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -60,18 +61,15 @@ export function GameComponent() {
     }
   }, []);
 
-  const handleStartAdventure = useCallback(async () => {
-    console.log('Starting adventure')
-    const initialMessage: Message = { role: 'user', content: 'Start a new spooky adventure story.' }
-    await fetchStorySegment([initialMessage])
-  }, [fetchStorySegment])
-
   useEffect(() => {
-    if (messages.length === 0) {
-      handleStartAdventure()
+    const startGame = searchParams.get('start') === 'true';
+    if (startGame && messages.length === 0) {
+      const initialMessage: Message = { role: 'user', content: 'Start a new spooky adventure story.' };
+      fetchStorySegment([initialMessage]);
+    } else if (messages.length === 0) {
+      router.push('/');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [router, messages, fetchStorySegment, searchParams]);
 
   const handleChoice = useCallback(async (choice: string) => {
     console.log('Handling choice:', choice)

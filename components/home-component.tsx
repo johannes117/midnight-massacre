@@ -16,7 +16,7 @@ export function HomeComponent() {
   ])
 
   const handleStartAdventure = () => {
-    router.push('/game')
+    router.push('/game?start=true')
   }
 
   const handleLoadGame = () => {
