@@ -11,11 +11,6 @@ import { motion } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { FloatingGhosts } from "@/components/floating-ghosts"
 
-interface StreamResponse {
-  type: 'narration' | 'choices';
-  content: string | string[];
-}
-
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -36,8 +31,8 @@ export function GameComponent() {
   const streamStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
     setStoryText('');
-    setChoices(['', '', '']); // Reset choices but don't show loading state
-  
+    // Don't reset choices yet to avoid UI jumping
+    
     try {
       const response = await fetch('/api/generate-story', {
         method: 'POST',
@@ -54,7 +49,8 @@ export function GameComponent() {
         throw new Error('ReadableStream not supported');
       }
   
-      let fullNarration = '';
+      let currentStoryText = '';
+      setChoices(['...', '...', '...']); // Show loading state in choices
   
       while (true) {
         const { done, value } = await reader.read();
@@ -65,16 +61,19 @@ export function GameComponent() {
   
         for (const line of lines) {
           try {
-            const data = JSON.parse(line) as StreamResponse;
+            const data = JSON.parse(line);
             
             if (data.type === 'narration') {
-              fullNarration += data.content as string;
-              setStoryText(fullNarration);
+              currentStoryText += data.content;
+              setStoryText(currentStoryText);
             } else if (data.type === 'choices') {
-              setChoices(data.content as string[]);
+              // Only set choices once we receive them
+              setChoices(data.content);
+            } else if (data.type === 'error') {
+              setStoryText(data.content);
+              setChoices(['Try again', 'Start over', 'Return to menu']);
             }
           } catch (e) {
-            // Ignore parsing errors for incomplete chunks
             console.debug('Error parsing chunk:', e);
           }
         }
@@ -83,7 +82,7 @@ export function GameComponent() {
       setMessages(prevMessages => [...prevMessages, { 
         role: 'assistant', 
         content: JSON.stringify({ 
-          narration: fullNarration, 
+          narration: currentStoryText,
           choices 
         })
       }]);
@@ -94,8 +93,7 @@ export function GameComponent() {
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array since it doesn't depend on any external state
+  }, [choices]);
 
   const handleStartAdventure = useCallback(async () => {
     console.log('Starting adventure')
