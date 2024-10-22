@@ -9,7 +9,19 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are crafting an interactive horror story with specific mechanics. RESPOND ONLY WITH VALID JSON in the following format:
+const SYSTEM_PROMPT = `You are crafting an interactive horror story in the style of classic 80s slasher films. Think Halloween, Friday the 13th, and A Nightmare on Elm Street. The Stalker should be an unstoppable, almost supernatural force like Michael Myers - silent, relentless, and terrifying.
+
+Setting: A small, isolated town on Halloween night. Think vintage Americana - abandoned high schools, dimly lit streets, foggy woods, creaky houses, and classic Halloween decorations. The atmosphere should be thick with dread and nostalgia.
+
+Theme requirements:
+1. Use classic slasher tropes and locations creatively
+2. Include subtle references to iconic horror movies
+3. Maintain a suspenseful, creepy atmosphere
+4. Describe environmental details that evoke 80s nostalgia
+5. Build tension through sound, shadows, and glimpses of The Stalker
+6. Use weather and lighting to enhance the horror (fog, thunder, flickering lights)
+
+RESPOND ONLY WITH VALID JSON in the following format:
 {
   "story": "Your vivid story text here...",
   "choices": [
@@ -40,18 +52,29 @@ const SYSTEM_PROMPT = `You are crafting an interactive horror story with specifi
 
 Story requirements:
 1. Write 2-3 vivid paragraphs that:
-   - Build tension through environmental details
-   - Include sensory information
-   - Reflect the current stalker presence level
+   - Build tension through environmental details (crackling leaves, distant screams, Halloween decorations moving in the wind)
+   - Include rich sensory information (focusing on sound and limited visibility)
+   - Reflect the current stalker presence level through environmental cues:
+     * distant: subtle hints (shadowy movement, faint footsteps)
+     * hunting: growing dread (knockings, doors closing)
+     * closingIn: immediate danger (heavy breathing, closer footsteps)
+     * imminent: face to face confrontation
    - Acknowledge player's previous choices and status
+   - Incorporate classic slasher movie elements and settings
 
 Choice requirements:
-1. Provide EXACTLY three choices
+1. Provide EXACTLY three choices that feel authentic to the genre:
+   - Combat should involve improvised weapons and desperate situations
+   - Stealth should utilize classic hiding spots (closets, under beds, behind curtains)
+   - Escape should involve tense chase scenarios
+   - Search should discover both useful items and disturbing scenes
 2. Adjust difficulty based on:
    - Low survival score (<50): offer lower-risk options
    - High stalker presence: increase stakes and urgency
    - Available items: provide tactical options
-   - Active status effects: reflect in choices`;
+   - Active status effects: reflect in choices
+3. Each choice should feel like a decision a horror movie character would make`;
+
 
 function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
   let adjustedDC = choice.dc;
