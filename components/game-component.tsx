@@ -163,11 +163,31 @@ export function GameComponent() {
     }
   }, [handleSearchParams, fetchStorySegment]);
 
+  // Handle viewport height for mobile browsers
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    updateViewportHeight();
+    window.addEventListener('resize', updateViewportHeight);
+    window.addEventListener('orientationchange', updateViewportHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportHeight);
+      window.removeEventListener('orientationchange', updateViewportHeight);
+    };
+  }, []);
+
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-red-900 via-black to-purple-900 text-red-100 flex flex-col relative overflow-hidden">
+    <div 
+      className="fixed inset-0 bg-gradient-to-b from-red-900 via-black to-purple-900 text-red-100 flex flex-col"
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
       <FloatingParticles />
       
-      {/* Header with controls - Fixed at top */}
+      {/* Header with controls */}
       <div className="w-full px-4 py-2 flex justify-between items-center bg-black/50 backdrop-blur-sm z-20 border-b border-red-800/30">
         <Sheet>
           <SheetTrigger asChild>
@@ -207,74 +227,80 @@ export function GameComponent() {
         </Button>
       </div>
 
-      {/* Main game content - Fills remaining space */}
-      <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+      {/* Main game content */}
+      <div className="flex-1 overflow-hidden">
         <Suspense fallback={<SpookyLoader />}>
           <SearchParamsWrapper>
             {() => (
-              <Card className="w-full max-w-2xl h-[calc(100dvh-8rem)] bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={storySegment?.story || 'loading'}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col h-full"
-                  >
-                    <CardContent className="flex flex-col p-4 space-y-4 flex-grow overflow-hidden">
-                      {gameState.hasWeapon && (
-                        <div className="text-red-400 text-sm text-center">You are armed</div>
-                      )}
-                      
-                      {/* Scrollable story area */}
-                      <ScrollArea className="flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-red-800/50">
-                        {isLoading ? (
-                          <SpookyLoader />
-                        ) : (
-                          <p className="text-lg leading-relaxed text-red-200">
-                            {storySegment?.story}
-                          </p>
+              <div className="h-full">
+                <Card className="h-full bg-black/70 border-red-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col rounded-none">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={storySegment?.story || 'loading'}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex flex-col h-full"
+                    >
+                      <CardContent className="flex flex-col flex-grow p-4 space-y-4 overflow-hidden">
+                        {gameState.hasWeapon && (
+                          <div className="text-red-400 text-sm text-center pb-2 border-b border-red-800/20">
+                            You are armed
+                          </div>
                         )}
-                      </ScrollArea>
-
-                      {/* Fixed-height choices container */}
-                      {!isLoading && storySegment && (
-                        <div className="space-y-2 min-h-[120px] flex flex-col">
-                          {isGameOver ? renderGameOver() : (
-                            storySegment.choices.map((choice, index) => (
-                              <Button
-                                key={index}
-                                onClick={() => handleChoice(choice)}
-                                className="w-full min-h-[40px] h-auto bg-red-900/50 hover:bg-red-800/70 text-red-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-red-500/30 hover:shadow-md text-left flex justify-between items-center whitespace-normal"
-                                disabled={isLoading}
-                              >
-                                <span className="flex-grow mr-2">{choice}</span>
-                                <ChevronRight className="h-5 w-5 flex-shrink-0" />
-                              </Button>
-                            ))
+                        
+                        {/* Scrollable story area */}
+                        <ScrollArea className="flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-red-800/50">
+                          {isLoading ? (
+                            <SpookyLoader />
+                          ) : (
+                            <p className="text-base sm:text-lg leading-relaxed text-red-200">
+                              {storySegment?.story}
+                            </p>
                           )}
-                        </div>
-                      )}
-                    </CardContent>
-                    
-                    <CardFooter className="p-4 border-t border-red-800/30">
-                      <Button
-                        variant="ghost"
-                        onClick={() => router.push('/')}
-                        className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50"
-                      >
-                        <ArrowLeft className="h-5 w-5 mr-2" />
-                        Give Up
-                      </Button>
-                    </CardFooter>
-                  </motion.div>
-                </AnimatePresence>
-              </Card>
+                        </ScrollArea>
+
+                        {/* Action buttons container - Fixed height with internal scroll if needed */}
+                        {!isLoading && storySegment && (
+                          <div className="flex flex-col gap-2 min-h-0 max-h-[35vh] overflow-y-auto px-1">
+                            {isGameOver ? renderGameOver() : (
+                              storySegment.choices.map((choice, index) => (
+                                <Button
+                                  key={index}
+                                  onClick={() => handleChoice(choice)}
+                                  className="w-full min-h-[3rem] bg-red-900/50 hover:bg-red-800/70 text-red-100 px-4 rounded-lg transition-all duration-300 ease-in-out text-left flex items-center gap-3 group"
+                                  disabled={isLoading}
+                                >
+                                  <span className="flex-grow text-sm sm:text-base font-medium leading-tight">
+                                    {choice}
+                                  </span>
+                                  <ChevronRight className="h-5 w-5 flex-shrink-0 opacity-75 group-hover:opacity-100 transition-opacity" />
+                                </Button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                      
+                      <CardFooter className="p-4 border-t border-red-800/30 bg-black/20">
+                        <Button
+                          variant="ghost"
+                          onClick={() => router.push('/')}
+                          className="text-red-400 hover:text-red-300 bg-black/30 hover:bg-black/50"
+                        >
+                          <ArrowLeft className="h-5 w-5 mr-2" />
+                          Give Up
+                        </Button>
+                      </CardFooter>
+                    </motion.div>
+                  </AnimatePresence>
+                </Card>
+              </div>
             )}
           </SearchParamsWrapper>
         </Suspense>
       </div>
     </div>
-  )
+  );
 }
