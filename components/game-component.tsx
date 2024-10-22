@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Skull, Settings, Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, User } from 'lucide-react'
+import { Skull, Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, User, Settings } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { FloatingGhosts } from "@/components/floating-ghosts"
 
@@ -20,10 +21,8 @@ interface StoryText {
   next?: string;
 }
 
-export function SpookyAdventureComponent() {
-  console.log('Component rendering')
-
-  const [screen, setScreen] = useState('home')
+export function GameComponent() {
+  const router = useRouter()
   const [storyText, setStoryText] = useState<string | StoryText>('')
   const [choices, setChoices] = useState<(string | { option: string; result: string })[]>([])
   const [isMuted, setIsMuted] = useState(false)
@@ -73,15 +72,13 @@ export function SpookyAdventureComponent() {
     setIsLoading(true)
     const initialMessage: Message = { role: 'user', content: 'Start a new spooky adventure story.' }
     await generateStorySegment([initialMessage])
-    setScreen('story')
   }, [])
 
   useEffect(() => {
-    console.log('Effect running, screen:', screen, 'messages length:', messages.length)
-    if (screen === 'story' && messages.length === 0) {
+    if (messages.length === 0) {
       handleStartAdventure()
     }
-  }, [screen, messages, handleStartAdventure])
+  }, [messages, handleStartAdventure])
 
   const handleChoice = async (choice: string | { option: string; result: string }) => {
     console.log('Handling choice:', choice)
@@ -92,112 +89,60 @@ export function SpookyAdventureComponent() {
     await generateStorySegment(updatedMessages)
   }
 
-  const handleLoadGame = () => {
-    console.log('Loading game:', savedGames[0].title)
-    setScreen('story')
-  }
-
-  console.log('Rendering, screen:', screen, 'isLoading:', isLoading)
-
   return (
     <div className="min-h-screen h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
       <FloatingGhosts />
       
       <Card className="w-full max-w-2xl h-[calc(100vh-2rem)] bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
-        <AnimatePresence mode="wait">
-          {screen === 'home' && (
-            <motion.div
-              key="home"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col h-full"
-            >
-              <CardHeader>
-                <CardTitle className="text-5xl font-bold text-orange-500 text-center">
-                  Spooky Adventure
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-center items-center p-6 space-y-6">
-                <p className="text-lg text-center text-orange-200">
-                  Embark on a thrilling journey through haunted realms and mysterious landscapes.
-                  Are you brave enough to face the unknown?
+        <motion.div
+          key="story"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col h-full"
+        >
+          <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
+            <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-orange-800/50">
+              {isLoading ? (
+                <Skeleton className="w-full h-full bg-orange-900/30" />
+              ) : (
+                <p className="text-lg leading-relaxed text-orange-200">
+                  {typeof storyText === 'object' && 'text' in storyText
+                    ? storyText.text
+                    : typeof storyText === 'string'
+                    ? storyText
+                    : 'Loading story...'}
                 </p>
-                <Button 
-                  onClick={handleStartAdventure}
-                  className="text-xl py-6 px-8 bg-orange-700 hover:bg-orange-600 text-white"
-                >
-                  Begin Your Adventure
-                </Button>
-              </CardContent>
-              <CardFooter className="flex justify-center space-x-4">
-                {savedGames.length > 0 && (
-                  <Button 
-                    variant="outline" 
-                    className="text-orange-400 hover:text-orange-300 bg-black/50 border-orange-700 hover:bg-orange-950 transition-colors"
-                    onClick={handleLoadGame}
-                  >
-                    <Skull className="mr-2 h-5 w-5" />
-                    Load Game - {savedGames[0].title}
-                  </Button>
-                )}
-              </CardFooter>
-            </motion.div>
-          )}
-
-          {screen === 'story' && (
-            <motion.div
-              key="story"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col h-full"
-            >
-              <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
-                <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-orange-800/50">
-                  {isLoading ? (
-                    <Skeleton className="w-full h-full bg-orange-900/30" />
-                  ) : (
-                    <p className="text-lg leading-relaxed text-orange-200">
-                      {typeof storyText === 'object' && 'text' in storyText
-                        ? storyText.text
-                        : typeof storyText === 'string'
-                        ? storyText
-                        : 'Loading story...'}
-                    </p>
-                  )}
-                </ScrollArea>
-                <div className="w-full space-y-4">
-                  {choices.map((choice, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => handleChoice(choice)}
-                      className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
-                      disabled={isLoading}
-                    >
-                      <span className="line-clamp-2 flex-grow">
-                        {typeof choice === 'object' ? choice.option : choice}
-                      </span>
-                      <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
+              )}
+            </ScrollArea>
+            <div className="w-full space-y-4">
+              {choices.map((choice, index) => (
                 <Button
-                  variant="ghost"
-                  onClick={() => setScreen('home')}
-                  className="text-orange-400 hover:text-orange-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
+                  key={index}
+                  onClick={() => handleChoice(choice)}
+                  className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
+                  disabled={isLoading}
                 >
-                  <ArrowLeft className="h-5 w-5 mr-2" />
-                  Back to Home
+                  <span className="line-clamp-2 flex-grow">
+                    {typeof choice === 'object' ? choice.option : choice}
+                  </span>
+                  <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
                 </Button>
-              </CardFooter>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              ))}
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/')}
+              className="text-orange-400 hover:text-orange-300 bg-black/30 hover:bg-black/50 rounded-full transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to Home
+            </Button>
+          </CardFooter>
+        </motion.div>
       </Card>
 
       <Button
@@ -241,7 +186,6 @@ export function SpookyAdventureComponent() {
                     className="w-full justify-start text-orange-300 hover:text-orange-200 hover:bg-orange-950/50"
                     onClick={() => {
                       console.log(`Loading game: ${game.title}`)
-                      setScreen('story')
                     }}
                   >
                     <Skull className="mr-2 h-5 w-5" />

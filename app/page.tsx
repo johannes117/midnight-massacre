@@ -1,9 +1,9 @@
-import { SpookyAdventureComponent } from '@/components/spooky-adventure'
+import { HomeComponent } from '@/components/home-component'
 
 export default function Home() {
   return (
     <main>
-      <SpookyAdventureComponent />
+      <HomeComponent />
     </main>
   )
 }
