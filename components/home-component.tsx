@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
-import { Skull, Github, Volume2, VolumeX } from 'lucide-react'
+import { Skull, Volume2, VolumeX } from 'lucide-react'
 import { FloatingGhosts } from "@/components/floating-ghosts"
 import { useAudioContext } from '@/components/audio-provider'
 
@@ -77,7 +77,7 @@ export function HomeComponent() {
             </div>
 
             {/* Footer Links */}
-            <div className="flex justify-center space-x-4">
+            <div className="flex justify-center">
               <Button
                 variant="ghost"
                 size="icon"
@@ -86,20 +86,6 @@ export function HomeComponent() {
               >
                 {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
               </Button>
-              
-              <a
-                href="https://github.com/yourusername/midnight-massacre"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-orange-400 hover:text-orange-300"
-                >
-                  <Github className="h-6 w-6" />
-                </Button>
-              </a>
             </div>
           </CardContent>
         </Card>
