@@ -93,7 +93,7 @@ export function GameComponent() {
     <div className="min-h-screen bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center overflow-hidden relative">
       <FloatingGhosts />
       
-      <Card className="w-full max-w-2xl h-full sm:h-auto bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
+      <Card className="w-full max-w-2xl h-[calc(100vh-2rem)] sm:h-auto sm:max-h-[calc(100vh-4rem)] bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden flex flex-col">
         <motion.div
           key="story"
           initial={{ opacity: 0, y: 20 }}
