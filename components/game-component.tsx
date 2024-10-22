@@ -10,13 +10,16 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { FloatingGhosts } from "@/components/floating-ghosts"
-import JSONAutocomplete from 'json-autocomplete'
+
+interface StreamResponse {
+  type: 'narration' | 'choices';
+  content: string | string[];
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
-
 export function GameComponent() {
   const router = useRouter()
   const [storyText, setStoryText] = useState<string>('')
@@ -30,66 +33,67 @@ export function GameComponent() {
   const [messages, setMessages] = useState<Message[]>([])
 
   const streamStorySegment = async (currentMessages: Message[]) => {
-    setIsLoading(true)
-    setStoryText('')
-    setChoices(['', '', ''])
-
+    setIsLoading(true);
+    setStoryText('');
+    setChoices(['', '', '']); // Reset choices but don't show loading state
+  
     try {
       const response = await fetch('/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: currentMessages }),
-      })
-
+      });
+  
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const reader = response.body?.getReader()
+  
+      const reader = response.body?.getReader();
       if (!reader) {
-        throw new Error('ReadableStream not supported')
+        throw new Error('ReadableStream not supported');
       }
-
-      let accumulatedData = ''
-      let narrationComplete = false
-
+  
+      let fullNarration = '';
+  
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = new TextDecoder().decode(value)
-        accumulatedData += chunk
-
-        try {
-          const completeJsonString = JSONAutocomplete(accumulatedData)
-          const parsedJson = JSON.parse(completeJsonString)
-
-          if (parsedJson.narration && !narrationComplete) {
-            setStoryText(parsedJson.narration)
-            if (parsedJson.choices) {
-              narrationComplete = true
+        const { done, value } = await reader.read();
+        if (done) break;
+  
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim());
+  
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line) as StreamResponse;
+            
+            if (data.type === 'narration') {
+              fullNarration += data.content as string;
+              setStoryText(fullNarration);
+            } else if (data.type === 'choices') {
+              setChoices(data.content as string[]);
             }
+          } catch (e) {
+            // Ignore parsing errors for incomplete chunks
+            console.debug('Error parsing chunk:', e);
           }
-          
-          if (narrationComplete && parsedJson.choices) {
-            setChoices(parsedJson.choices.map((choice: string | { option: string; result: string }) => 
-              typeof choice === 'string' ? choice : choice.option
-            ))
-          }
-        } catch {
-          // Ignore parsing errors for incomplete JSON
         }
       }
-
-      setMessages([...currentMessages, { role: 'assistant', content: accumulatedData }])
+  
+      setMessages([...currentMessages, { 
+        role: 'assistant', 
+        content: JSON.stringify({ 
+          narration: fullNarration, 
+          choices: choices 
+        })
+      }]);
     } catch (error) {
-      console.error('Error streaming story segment:', error)
-      setStoryText('An error occurred while generating the story. Please try again.')
-      setChoices(['', '', ''])
+      console.error('Error streaming story segment:', error);
+      setStoryText('An error occurred while generating the story. Please try again.');
+      setChoices(['Try again', 'Start over', 'Return to menu']);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleStartAdventure = useCallback(async () => {
     console.log('Starting adventure')
