@@ -79,14 +79,35 @@ Choice requirements:
 function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
   let adjustedDC = choice.dc;
   
-  adjustedDC += GameMechanics.calculateEnvironmentalModifiers(gameState);
-  adjustedDC += GameMechanics.calculateStatusModifiers(gameState, choice.type);
-  adjustedDC += GameMechanics.calculateStalkerModifier(gameState.stalkerPresence);
-  adjustedDC += Math.floor(gameState.encounterCount / 3);
+  let totalModifier = 0;
+  
+  const environmentalMod = GameMechanics.calculateEnvironmentalModifiers(gameState);
+  const statusMod = GameMechanics.calculateStatusModifiers(gameState, choice.type);
+  const stalkerMod = GameMechanics.calculateStalkerModifier(gameState.stalkerPresence);
+  const encounterMod = Math.floor(gameState.encounterCount / 3);
+
+  totalModifier += environmentalMod;
+  totalModifier += statusMod;
+  totalModifier += stalkerMod;
+  totalModifier += encounterMod;
 
   if (gameState.survivalScore < 50) {
-    adjustedDC -= 2;
+    totalModifier += 2; // Make it easier when survival score is low
   }
+
+  // Adjust the DC based on the total modifier
+  adjustedDC = Math.max(1, adjustedDC - totalModifier);
+
+  console.log(`Choice Difficulty Adjustment:
+    Original DC: ${choice.dc}
+    Environmental Modifier: ${environmentalMod}
+    Status Modifier: ${statusMod}
+    Stalker Modifier: ${stalkerMod}
+    Encounter Modifier: ${encounterMod}
+    Low Survival Score Modifier: ${gameState.survivalScore < 50 ? 2 : 0}
+    Total Modifier: ${totalModifier}
+    Adjusted DC: ${adjustedDC}
+  `);
 
   return {
     ...choice,

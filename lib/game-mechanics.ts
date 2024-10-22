@@ -32,31 +32,37 @@ export class GameMechanics {
   }
 
   static calculateEnvironmentalModifiers(gameState: GameState): number {
-    if (!gameState?.environmentalModifiers) return 0;
     const { darkness, noise, weather } = gameState.environmentalModifiers;
-    return (darkness || 0) + (noise || 0) + (weather || 0);
+    const totalModifier = darkness + noise + weather;
+    console.log(`Environmental Modifier: ${totalModifier}`);
+    return totalModifier;
   }
 
   static calculateStatusModifiers(gameState: GameState, actionType: Choice['type']): number {
-    if (!gameState?.statusEffects) return 0;
     let modifier = 0;
-
-    if (gameState.statusEffects.includes('injured')) modifier += 3;
-    if (gameState.statusEffects.includes('hidden') && actionType === 'stealth') modifier -= 2;
-    if (gameState.statusEffects.includes('exposed')) modifier += 4;
-    if (gameState.hasWeapon && actionType === 'combat') modifier -= 2;
-
+    if (gameState.statusEffects.includes('injured')) {
+      modifier -= 2;
+    }
+    if (gameState.statusEffects.includes('hidden') && actionType === 'stealth') {
+      modifier += 2;
+    }
+    if (gameState.statusEffects.includes('exposed')) {
+      modifier -= 1;
+    }
+    console.log(`Status Modifier: ${modifier}`);
     return modifier;
   }
 
   static calculateStalkerModifier(stalkerPresence: GameState['stalkerPresence']): number {
     const modifiers = {
       distant: 0,
-      hunting: 2,
-      closingIn: 4,
-      imminent: 6
+      hunting: -1,
+      closingIn: -2,
+      imminent: -3
     };
-    return modifiers[stalkerPresence] || 0;
+    const modifier = modifiers[stalkerPresence];
+    console.log(`Stalker Modifier: ${modifier}`);
+    return modifier;
   }
 
   static resolveAction(
@@ -76,8 +82,18 @@ export class GameMechanics {
     const statusMod = this.calculateStatusModifiers(gameState, choice.type);
     const stalkerMod = this.calculateStalkerModifier(gameState.stalkerPresence);
     
-    const totalRoll = roll - environmentalMod - statusMod - stalkerMod;
+    const totalRoll = roll + environmentalMod + statusMod + stalkerMod;
     const success = totalRoll >= choice.dc;
+
+    console.log(`Action Resolution:
+      Roll: ${roll}
+      Environmental Modifier: ${environmentalMod}
+      Status Modifier: ${statusMod}
+      Stalker Modifier: ${stalkerMod}
+      Total Roll: ${totalRoll}
+      DC: ${choice.dc}
+      Success: ${success}
+    `);
 
     const survivalDelta = success ? choice.rewardValue : -choice.riskFactor;
     const newSurvivalScore = Math.min(
@@ -127,7 +143,8 @@ export class GameMechanics {
       else quality = 'Failure!';
     }
 
-    return `${quality} (Rolled ${roll}, needed ${dc})`;
+    // Update the output text to show the total roll
+    return `${quality} (Rolled ${roll}, total ${totalRoll} including modifiers, needed ${dc})`;
   }
 
   private static rollD20(): number {
