@@ -20,8 +20,8 @@ export class GameMechanics {
       return { isOver: true, ending: 'caught' };
     }
 
-    const hasEscapeConditions = gameState.hasKey && gameState.survivalScore >= 75 && gameState.encounterCount >= 5;
-    const hasVictoryConditions = gameState.hasWeapon && gameState.survivalScore >= 100 && gameState.encounterCount >= 7;
+    const hasEscapeConditions = gameState.hasKey && gameState.survivalScore >= 80 && gameState.encounterCount >= 6;
+    const hasVictoryConditions = gameState.hasWeapon && gameState.survivalScore >= 100 && gameState.encounterCount >= 8;
 
     if (hasEscapeConditions || hasVictoryConditions) {
       return { isOver: true, ending: 'victory' };
@@ -33,7 +33,6 @@ export class GameMechanics {
   static calculateEnvironmentalModifiers(gameState: GameState): number {
     const { darkness, noise, weather } = gameState.environmentalModifiers;
     const totalModifier = Math.min(5, darkness + noise + weather);
-    console.log(`Environmental Modifier: ${totalModifier}`);
     return totalModifier;
   }
 
@@ -49,7 +48,6 @@ export class GameMechanics {
       modifier -= 1;
     }
     modifier = Math.max(-2, Math.min(2, modifier));
-    console.log(`Status Modifier: ${modifier}`);
     return modifier;
   }
 
@@ -61,7 +59,6 @@ export class GameMechanics {
       imminent: -2
     };
     const modifier = modifiers[stalkerPresence];
-    console.log(`Stalker Modifier: ${modifier}`);
     return modifier;
   }
 
@@ -69,31 +66,8 @@ export class GameMechanics {
     choice: Choice,
     gameState: GameState
   ): { success: boolean; newGameState: GameState; outcomeText: string } {
-    if (!gameState) {
-      return {
-        success: false,
-        newGameState: INITIAL_GAME_STATE,
-        outcomeText: "Error: Game state not found"
-      };
-    }
-
     const roll = this.rollD20();
-    const environmentalMod = this.calculateEnvironmentalModifiers(gameState);
-    const statusMod = this.calculateStatusModifiers(gameState, choice.type);
-    const stalkerMod = this.calculateStalkerModifier(gameState.stalkerPresence);
-    
-    const totalRoll = roll + environmentalMod + statusMod + stalkerMod;
-    const success = totalRoll >= choice.dc;
-
-    console.log(`Action Resolution:
-      Roll: ${roll}
-      Environmental Modifier: ${environmentalMod}
-      Status Modifier: ${statusMod}
-      Stalker Modifier: ${stalkerMod}
-      Total Roll: ${totalRoll}
-      DC: ${choice.dc}
-      Success: ${success}
-    `);
+    const success = roll >= choice.dc;
 
     const survivalDelta = success ? choice.rewardValue : -choice.riskFactor;
     const newSurvivalScore = Math.min(
@@ -118,7 +92,7 @@ export class GameMechanics {
       newGameState.stalkerPresence = progressions[gameState.stalkerPresence];
     }
 
-    const outcomeText = this.generateOutcomeText(success, roll, choice, totalRoll, choice.dc);
+    const outcomeText = this.generateOutcomeText(success, roll, choice.dc);
 
     return { success, newGameState, outcomeText };
   }
@@ -126,25 +100,10 @@ export class GameMechanics {
   private static generateOutcomeText(
     success: boolean,
     roll: number,
-    choice: Choice,
-    totalRoll: number,
     dc: number
   ): string {
-    const margin = Math.abs(totalRoll - dc);
-    let quality = '';
-    
-    if (success) {
-      if (margin >= 10) quality = 'Critical Success!';
-      else if (margin >= 5) quality = 'Great Success!';
-      else quality = 'Success!';
-    } else {
-      if (margin >= 10) quality = 'Critical Failure!';
-      else if (margin >= 5) quality = 'Major Failure!';
-      else quality = 'Failure!';
-    }
-
-    // Update the output text to show the total roll
-    return `${quality} (Rolled ${roll}, total ${totalRoll} including modifiers, needed ${dc})`;
+    const result = success ? 'Success!' : 'Failure!';
+    return `${result} (Rolled ${roll}, needed ${dc})`;
   }
 
   private static rollD20(): number {
@@ -164,5 +123,10 @@ export const INITIAL_GAME_STATE: GameState = {
     darkness: 0,
     noise: 0,
     weather: 0
-  }
+  },
+  companions: [
+    { name: 'Alex', status: 'alive' },
+    { name: 'Jamie', status: 'alive' },
+    { name: 'Casey', status: 'alive' }
+  ]
 };
