@@ -25,7 +25,7 @@ export function SpookyAdventureComponent() {
 
   const [screen, setScreen] = useState('home')
   const [storyText, setStoryText] = useState<string | StoryText>('')
-  const [choices, setChoices] = useState<string[]>([])
+  const [choices, setChoices] = useState<(string | { option: string; result: string })[]>([])
   const [isMuted, setIsMuted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [savedGames] = useState<{ title: string; date: string }[]>([
@@ -56,7 +56,7 @@ export function SpookyAdventureComponent() {
         throw new Error('Invalid response format: missing narration or choices');
       }
 
-      setStoryText(data.narration);
+      setStoryText(typeof data.narration === 'object' && 'text' in data.narration ? data.narration.text : data.narration);
       setChoices(data.choices);
       setMessages([...currentMessages, { role: 'assistant', content: JSON.stringify(data) }]);
     } catch (error) {
@@ -83,10 +83,11 @@ export function SpookyAdventureComponent() {
     }
   }, [screen, messages, handleStartAdventure])
 
-  const handleChoice = async (choice: string) => {
+  const handleChoice = async (choice: string | { option: string; result: string }) => {
     console.log('Handling choice:', choice)
     setIsLoading(true)
-    const userMessage: Message = { role: 'user', content: `I choose: ${choice}` }
+    const choiceContent = typeof choice === 'object' ? choice.option : choice
+    const userMessage: Message = { role: 'user', content: `I choose: ${choiceContent}` }
     const updatedMessages = [...messages, userMessage]
     await generateStorySegment(updatedMessages)
   }
@@ -160,7 +161,11 @@ export function SpookyAdventureComponent() {
                     <Skeleton className="w-full h-full bg-orange-900/30" />
                   ) : (
                     <p className="text-lg leading-relaxed text-orange-200">
-                      {typeof storyText === 'object' && 'text' in storyText ? storyText.text : storyText}
+                      {typeof storyText === 'object' && 'text' in storyText
+                        ? storyText.text
+                        : typeof storyText === 'string'
+                        ? storyText
+                        : 'Loading story...'}
                     </p>
                   )}
                 </ScrollArea>
@@ -172,7 +177,9 @@ export function SpookyAdventureComponent() {
                       className="w-full h-auto min-h-[3rem] bg-orange-900/50 hover:bg-orange-800/70 text-orange-100 font-medium py-2 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-orange-500/30 hover:shadow-md text-left flex justify-between items-center"
                       disabled={isLoading}
                     >
-                      <span className="line-clamp-2 flex-grow">{choice}</span>
+                      <span className="line-clamp-2 flex-grow">
+                        {typeof choice === 'object' ? choice.option : choice}
+                      </span>
                       <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" />
                     </Button>
                   ))}
@@ -212,8 +219,9 @@ export function SpookyAdventureComponent() {
             <Menu className="h-6 w-6" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/90 border-orange-800">
+        <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/90 border-orange-800" aria-describedby="menu-description">
           <SheetTitle className="text-lg font-semibold text-orange-400 mb-4">Menu</SheetTitle>
+          <p id="menu-description" className="sr-only">Game menu containing profile, settings, and saved games</p>
           <nav className="flex flex-col h-full">
             <div className="flex items-center mb-6">
               <User className="mr-2 h-6 w-6 text-orange-400" />
