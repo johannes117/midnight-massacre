@@ -4,7 +4,7 @@ import { useState, useCallback, Suspense, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Volume2, VolumeX, ChevronRight, Menu, Home, RotateCcw } from 'lucide-react'
+import { Volume2, VolumeX, Menu, Home, RotateCcw } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -233,13 +233,12 @@ export function GameComponent() {
                   <Button
                     key={index}
                     onClick={() => handleChoice(choice)}
-                    className="w-full min-h-[3rem] bg-red-900/50 hover:bg-red-800/70 text-red-100 px-4 rounded-lg transition-all duration-300 ease-in-out text-left flex items-center gap-3 group"
+                    className="w-full bg-red-900/50 hover:bg-red-800/70 text-red-100 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out text-left"
                     disabled={isLoading}
                   >
-                    <span className="flex-grow text-sm sm:text-base font-medium leading-tight">
+                    <span className="text-sm sm:text-base font-medium leading-tight break-words">
                       {choice}
                     </span>
-                    <ChevronRight className="h-5 w-5 flex-shrink-0 opacity-75 group-hover:opacity-100 transition-opacity" />
                   </Button>
                 ))
               )}
