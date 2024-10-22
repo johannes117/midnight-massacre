@@ -33,9 +33,16 @@ Particle.displayName = 'Particle';
 
 export const FloatingParticles: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    const checkIsDesktop = () => {
+      setIsDesktop(window.matchMedia('(min-width: 768px)').matches);
+    };
+    checkIsDesktop();
+    window.addEventListener('resize', checkIsDesktop);
+    return () => window.removeEventListener('resize', checkIsDesktop);
   }, []);
 
   const particles = useMemo(() => {
@@ -51,7 +58,7 @@ export const FloatingParticles: React.FC = () => {
     }));
   }, []);
 
-  if (!isClient) return null;
+  if (!isClient || !isDesktop) return null;
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none">
