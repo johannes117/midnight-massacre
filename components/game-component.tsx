@@ -250,8 +250,8 @@ export function GameComponent() {
                           </div>
                         )}
                         
-                        {/* Scrollable story area */}
-                        <ScrollArea className="flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-red-800/50">
+                        {/* Scrollable story area - Reduced max-height */}
+                        <ScrollArea className="flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-red-800/50 max-h-[40vh]">
                           {isLoading ? (
                             <SpookyLoader />
                           ) : (
@@ -261,9 +261,9 @@ export function GameComponent() {
                           )}
                         </ScrollArea>
 
-                        {/* Action buttons container - Fixed height with internal scroll if needed */}
+                        {/* Action buttons container - Removed max-height and overflow */}
                         {!isLoading && storySegment && (
-                          <div className="flex flex-col gap-2 min-h-0 max-h-[35vh] overflow-y-auto px-1">
+                          <div className="flex flex-col gap-2 mt-4">
                             {isGameOver ? renderGameOver() : (
                               storySegment.choices.map((choice, index) => (
                                 <Button
