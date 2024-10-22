@@ -1,95 +1,113 @@
 // /app/api/generate-story/route.ts
-import { OpenAI } from 'openai';
+import OpenAI from 'openai';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { NextRequest } from 'next/server';
+import { GameMechanics } from '@/lib/game-mechanics';
+import type { GameState, Choice, StoryResponse, Message } from '@/lib/types';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
+const SYSTEM_PROMPT = `You are crafting an interactive horror story with specific mechanics. For each response, provide:
 
-export const runtime = 'edge';
+1. A vivid story segment (2-3 paragraphs) that:
+   - Builds tension through environmental details
+   - Includes sensory information
+   - Reflects the current stalker presence level
+   - Acknowledges player's previous choices and current status
 
-// Game state interface to track player progress
-interface GameState {
-  hasWeapon: boolean;
-  hasKey: boolean;
-  tension: number;
-  encounterCount: number;
-}
+2. Exactly three choices, each with:
+   - Difficulty Class (DC): 1-20 (higher for riskier actions)
+   - Risk Factor: -5 to -30 (survival points lost on failure)
+   - Reward Value: +5 to +20 (survival points gained on success)
+   - Action Type: combat, stealth, escape, or search
+   
+Consider the current game state:
+- Survival Score (player dies at 0)
+- Stalker Presence (distant, hunting, closingIn, imminent)
+- Status Effects (injured, hidden, exposed)
+- Items (weapon, key)
 
-const INITIAL_GAME_STATE: GameState = {
-  hasWeapon: false,
-  hasKey: false,
-  tension: 0,
-  encounterCount: 0,
-};
+Adjust difficulty and stakes based on:
+- If survival score is low (<50), provide some lower-risk options
+- If stalker presence is high, increase stakes and urgency
+- If player has items, offer relevant tactical options
+- If status effects are active, reflect them in choices`;
 
-const SYSTEM_PROMPT = `You are crafting an interactive slasher horror story in the tradition of Halloween and Friday the 13th. 
-The story follows a protagonist being hunted by an unstoppable masked killer known as "The Stalker" through a small town during Halloween night.
+function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
+  let adjustedDC = choice.dc;
+  
+  adjustedDC += GameMechanics.calculateEnvironmentalModifiers(gameState);
+  adjustedDC += GameMechanics.calculateStatusModifiers(gameState, choice.type);
+  adjustedDC += GameMechanics.calculateStalkerModifier(gameState.stalkerPresence);
+  adjustedDC += Math.floor(gameState.encounterCount / 3);
 
-Core Elements:
-1. Goal: The player must survive the night by either escaping or, if they've found the right items, confronting the killer
-2. The Stalker: An emotionless, relentless killer who becomes more aggressive as the story progresses
-3. Setting: A small town during Halloween night, with locations like houses, streets, shops, and dark alleys
-4. Items: The player can find weapons, keys, or tools to aid their escape
-
-Story Rules:
-1. Build tension through environmental details, unsettling sounds, and glimpses of The Stalker
-2. Create a sense of being hunted - The Stalker is always nearby
-3. Choices must have meaningful consequences
-4. Death is possible but should result from clear player decisions
-5. Include opportunities to find items that help with escape or survival
-
-Victory Conditions:
-- Escape: Find key items and reach a safe location
-- Confrontation: With the right weapons and preparation, face The Stalker
-- Each ending should feel earned through player choices
-
-For each response, provide:
-1. A vivid story segment (2-3 paragraphs) with:
-   - Rich sensory details
-   - Clear signs of danger
-   - Environmental storytelling
-2. Exactly three distinct choices that:
-   - Lead to different outcomes
-   - Include risk vs. reward decisions
-   - Consider the player's current items and situation
-
-Format your response as valid JSON:
-{
-  "story": "your horror story text here",
-  "choices": ["choice 1", "choice 2", "choice 3"],
-  "gameState": {
-    "hasWeapon": boolean,
-    "hasKey": boolean,
-    "tension": number,
-    "encounterCount": number
+  if (gameState.survivalScore < 50) {
+    adjustedDC -= 2;
   }
-}`;
 
-async function generateStoryResponse(messages: ChatMessage[], currentGameState: GameState = INITIAL_GAME_STATE) {
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
+  return {
+    ...choice,
+    dc: Math.min(20, Math.max(1, adjustedDC))
+  };
+}
+
+function validateChoices(choices: Choice[]): Choice[] {
+  return choices.map(choice => ({
+    ...choice,
+    dc: Math.min(20, Math.max(1, choice.dc)),
+    riskFactor: Math.min(-5, Math.max(-30, choice.riskFactor)),
+    rewardValue: Math.min(20, Math.max(5, choice.rewardValue)),
+    type: ['combat', 'stealth', 'escape', 'search'].includes(choice.type) ? 
+      choice.type : 'search'
+  }));
+}
+
+function generateFallbackResponse(): StoryResponse {
+  return {
+    story: "The shadows grow longer as The Stalker's presence looms... Something has gone wrong, but you must keep moving.",
+    choices: [
       {
-        role: 'system',
-        content: SYSTEM_PROMPT
+        text: "Hide in the nearest room",
+        dc: 12,
+        riskFactor: -10,
+        rewardValue: 15,
+        type: 'stealth',
+        logic: "Basic stealth option with moderate risk/reward"
       },
       {
-        role: 'system',
-        content: `Current game state: ${JSON.stringify(currentGameState)}`
+        text: "Make a run for it",
+        dc: 14,
+        riskFactor: -20,
+        rewardValue: 20,
+        type: 'escape',
+        logic: "High-risk escape attempt"
       },
-      ...messages
+      {
+        text: "Search for anything useful",
+        dc: 10,
+        riskFactor: -5,
+        rewardValue: 10,
+        type: 'search',
+        logic: "Low-risk search option"
+      }
     ],
-    temperature: 0.8,
-    response_format: { type: "json_object" },
-  });
-
-  return completion.choices[0]?.message?.content || '';
+    gameState: {
+      survivalScore: 100,
+      hasWeapon: false,
+      hasKey: false,
+      tension: 5,
+      encounterCount: 0,
+      stalkerPresence: 'distant',
+      statusEffects: [],
+      environmentalModifiers: {
+        darkness: 0,
+        noise: 0,
+        weather: 0
+      }
+    }
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -101,31 +119,61 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { messages, gameState } = await req.json() as { 
-      messages: ChatMessage[];
-      gameState?: GameState;
+    const { messages, gameState } = await req.json() as {
+      messages: Message[];
+      gameState: GameState;
     };
 
-    if (!messages) {
-      return Response.json(
-        { error: 'No messages provided' },
-        { status: 400 }
-      );
-    }
+    const gameStatePrompt = `
+Current game state:
+- Survival Score: ${gameState.survivalScore}
+- Stalker Presence: ${gameState.stalkerPresence}
+- Status Effects: ${gameState.statusEffects.join(', ') || 'none'}
+- Items: ${[
+    gameState.hasWeapon && 'weapon',
+    gameState.hasKey && 'key'
+  ].filter(Boolean).join(', ') || 'none'}
+- Tension: ${gameState.tension}/10
+- Encounters: ${gameState.encounterCount}`;
 
-    const response = await generateStoryResponse(messages, gameState || INITIAL_GAME_STATE);
-    return Response.json(JSON.parse(response));
-    
-  } catch (err) {
-    console.error('Error generating story:', err);
+    // Convert messages to ChatCompletionMessageParam format
+    const apiMessages: ChatCompletionMessageParam[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: gameStatePrompt },
+      ...messages.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
+        content: msg.content
+      }))
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: apiMessages,
+      temperature: 0.8,
+      response_format: { type: "json_object" },
+    });
+
+    const response: StoryResponse = JSON.parse(completion.choices[0]?.message?.content || '');
+
+    response.choices = validateChoices(response.choices);
+    response.choices = response.choices.map(choice => 
+      adjustChoiceDifficulty(choice, gameState)
+    );
+
+    response.gameState = {
+      ...gameState,
+      ...response.gameState,
+      survivalScore: gameState.survivalScore,
+      tension: Math.min(10, gameState.tension)
+    };
+
+    return Response.json(response);
+  } catch (error) {
+    console.error('Error generating story:', error);
     return Response.json(
-      { 
-        error: err instanceof Error ? err.message : 'An error occurred',
-        fallback: {
-          story: "The Stalker's shadow looms closer... Perhaps we should try a different path?",
-          choices: ["Run and hide", "Look for another way", "Face your fate"],
-          gameState: INITIAL_GAME_STATE
-        }
+      {
+        error: error instanceof Error ? error.message : 'An error occurred',
+        fallback: generateFallbackResponse()
       },
       { status: 500 }
     );
