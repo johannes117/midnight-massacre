@@ -74,7 +74,7 @@ export function GameComponent() {
       const data: StoryResponse = await response.json();
       
       // Check game over conditions
-      const { isOver, ending } = data.gameState ? GameMechanics.checkGameOver(data.gameState) : { isOver: false, ending: '' };
+      const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
       if (isOver) {
         setIsGameOver(true);
         if (ending === 'death') {
@@ -314,15 +314,21 @@ export function GameComponent() {
           <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/90 border-orange-800">
             <SheetTitle className="text-lg font-semibold text-orange-400 mb-4">Game Status</SheetTitle>
             <div className="space-y-4 text-orange-200">
-              <div>Survival Score: {gameState.survivalScore}/100</div>
-              <div>Stalker Presence: {gameState.stalkerPresence}</div>
-              <div>Tension Level: {gameState.tension}/10</div>
-              <div>Items Found: {[
-                gameState.hasWeapon && 'Weapon',
-                gameState.hasKey && 'Key'
-              ].filter(Boolean).join(', ') || 'None'}</div>
-              <div>Status Effects: {gameState.statusEffects.join(', ') || 'None'}</div>
-              <div>Encounters: {gameState.encounterCount}</div>
+              {gameState ? (
+                <>
+                  <div>Survival Score: {gameState.survivalScore}/100</div>
+                  <div>Stalker Presence: {gameState.stalkerPresence}</div>
+                  <div>Tension Level: {gameState.tension}/10</div>
+                  <div>Items Found: {[
+                    gameState.hasWeapon && 'Weapon',
+                    gameState.hasKey && 'Key'
+                  ].filter(Boolean).join(', ') || 'None'}</div>
+                  <div>Status Effects: {gameState.statusEffects.join(', ') || 'None'}</div>
+                  <div>Encounters: {gameState.encounterCount}</div>
+                </>
+              ) : (
+                <div>Loading game state...</div>
+              )}
               <hr className="border-orange-800/30" />
               <Button
                 variant="ghost"

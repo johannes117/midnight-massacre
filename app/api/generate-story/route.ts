@@ -79,6 +79,8 @@ Theme requirements:
 8. Allow player to interact with their friends through choices
 9. Friends can be killed off by the Stalker as the story progresses
 
+Important: Always provide exactly 3 choices.
+
 RESPOND ONLY WITH VALID JSON in the following format:
 {
   "story": "Your vivid story text here...",
