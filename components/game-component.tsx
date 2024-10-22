@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Skull, Volume2, VolumeX, ChevronRight, Menu, ArrowLeft, User, Settings } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { FloatingGhosts } from "@/components/floating-ghosts"
+import SpookyLoader from './spooky-loader'
 
 interface Message {
   role: 'user' | 'assistant';
@@ -147,7 +147,7 @@ export function GameComponent() {
           <CardContent className="flex flex-col items-center p-6 space-y-6 flex-grow overflow-hidden">
             <ScrollArea className="w-full flex-grow p-4 bg-black/30 rounded-lg shadow-inner border border-orange-800/50">
               {isLoading ? (
-                <Skeleton className="w-full h-full bg-orange-900/30" />
+                <SpookyLoader />
               ) : (
                 <p className="text-lg leading-relaxed text-orange-200">
                   {storyText}
