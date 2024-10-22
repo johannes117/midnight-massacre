@@ -218,7 +218,7 @@ Consider these conditions when setting DCs and risk factors. Remember:
     ];
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini',
       messages: apiMessages,
       temperature: 0.8,
     });

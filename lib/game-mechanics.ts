@@ -12,7 +12,11 @@ export class GameMechanics {
     DEADLY: { min: 17, max: 20 }  // Extremely dangerous (direct combat, desperate moves)
   };
 
-  static checkGameOver(gameState: GameState): GameOverState {
+  static checkGameOver(gameState: GameState | undefined): GameOverState {
+    if (!gameState) {
+      return { isOver: false, ending: '' };
+    }
+
     // Death by low survival score
     if (gameState.survivalScore <= this.MIN_SURVIVAL_SCORE) {
       return { isOver: true, ending: 'death' };

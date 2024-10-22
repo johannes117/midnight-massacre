@@ -74,7 +74,7 @@ export function GameComponent() {
       const data: StoryResponse = await response.json();
       
       // Check game over conditions
-      const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
+      const { isOver, ending } = data.gameState ? GameMechanics.checkGameOver(data.gameState) : { isOver: false, ending: '' };
       if (isOver) {
         setIsGameOver(true);
         if (ending === 'death') {
