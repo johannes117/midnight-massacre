@@ -84,7 +84,7 @@ function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
   const environmentalMod = GameMechanics.calculateEnvironmentalModifiers(gameState);
   const statusMod = GameMechanics.calculateStatusModifiers(gameState, choice.type);
   const stalkerMod = GameMechanics.calculateStalkerModifier(gameState.stalkerPresence);
-  const encounterMod = Math.floor(gameState.encounterCount / 3);
+  const encounterMod = Math.min(2, Math.floor(gameState.encounterCount / 3));
 
   totalModifier += environmentalMod;
   totalModifier += statusMod;
@@ -92,11 +92,14 @@ function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
   totalModifier += encounterMod;
 
   if (gameState.survivalScore < 50) {
-    totalModifier += 2; // Make it easier when survival score is low
+    totalModifier += 1; // Make it slightly easier when survival score is low
   }
 
+  // Cap the total modifier
+  totalModifier = Math.max(-5, Math.min(5, totalModifier));
+
   // Adjust the DC based on the total modifier
-  adjustedDC = Math.max(1, adjustedDC - totalModifier);
+  adjustedDC = Math.max(1, Math.min(20, adjustedDC - totalModifier));
 
   console.log(`Choice Difficulty Adjustment:
     Original DC: ${choice.dc}
@@ -104,14 +107,14 @@ function adjustChoiceDifficulty(choice: Choice, gameState: GameState): Choice {
     Status Modifier: ${statusMod}
     Stalker Modifier: ${stalkerMod}
     Encounter Modifier: ${encounterMod}
-    Low Survival Score Modifier: ${gameState.survivalScore < 50 ? 2 : 0}
+    Low Survival Score Modifier: ${gameState.survivalScore < 50 ? 1 : 0}
     Total Modifier: ${totalModifier}
     Adjusted DC: ${adjustedDC}
   `);
 
   return {
     ...choice,
-    dc: Math.min(20, Math.max(1, adjustedDC))
+    dc: adjustedDC
   };
 }
 

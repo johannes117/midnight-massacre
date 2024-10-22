@@ -8,7 +8,6 @@ export class GameMechanics {
   private static readonly DEATH_THRESHOLD = 0;
 
   static checkGameOver(gameState?: GameState): { isOver: boolean; ending: string } {
-    // Return early if gameState is undefined
     if (!gameState) {
       return { isOver: false, ending: '' };
     }
@@ -21,8 +20,8 @@ export class GameMechanics {
       return { isOver: true, ending: 'caught' };
     }
 
-    const hasEscapeConditions = gameState.hasKey && gameState.survivalScore >= 75;
-    const hasVictoryConditions = gameState.hasWeapon && gameState.survivalScore >= 100;
+    const hasEscapeConditions = gameState.hasKey && gameState.survivalScore >= 75 && gameState.encounterCount >= 5;
+    const hasVictoryConditions = gameState.hasWeapon && gameState.survivalScore >= 100 && gameState.encounterCount >= 7;
 
     if (hasEscapeConditions || hasVictoryConditions) {
       return { isOver: true, ending: 'victory' };
@@ -33,7 +32,7 @@ export class GameMechanics {
 
   static calculateEnvironmentalModifiers(gameState: GameState): number {
     const { darkness, noise, weather } = gameState.environmentalModifiers;
-    const totalModifier = darkness + noise + weather;
+    const totalModifier = Math.min(5, darkness + noise + weather);
     console.log(`Environmental Modifier: ${totalModifier}`);
     return totalModifier;
   }
@@ -41,14 +40,15 @@ export class GameMechanics {
   static calculateStatusModifiers(gameState: GameState, actionType: Choice['type']): number {
     let modifier = 0;
     if (gameState.statusEffects.includes('injured')) {
-      modifier -= 2;
+      modifier -= 1;
     }
     if (gameState.statusEffects.includes('hidden') && actionType === 'stealth') {
-      modifier += 2;
+      modifier += 1;
     }
     if (gameState.statusEffects.includes('exposed')) {
       modifier -= 1;
     }
+    modifier = Math.max(-2, Math.min(2, modifier));
     console.log(`Status Modifier: ${modifier}`);
     return modifier;
   }
@@ -57,8 +57,8 @@ export class GameMechanics {
     const modifiers = {
       distant: 0,
       hunting: -1,
-      closingIn: -2,
-      imminent: -3
+      closingIn: -1,
+      imminent: -2
     };
     const modifier = modifiers[stalkerPresence];
     console.log(`Stalker Modifier: ${modifier}`);
