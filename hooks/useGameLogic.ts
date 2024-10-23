@@ -1,27 +1,24 @@
+// /hooks/useGameLogic.ts
 import { useState, useCallback, useEffect } from 'react';
-import { GameState, Message, Choice, StoryResponse } from '@/lib/types';
+import type { Choice, GameState } from '@/lib/types';
 import { GameMechanics } from '@/lib/game-mechanics';
 
-const INITIAL_GAME_STATE: GameState = {
-  survivalScore: 100,
-  hasWeapon: false,
-  hasKey: false,
-  tension: 0,
-  encounterCount: 0,
-  stalkerPresence: 'distant',
-  statusEffects: [],
-  environmentalModifiers: {
-    darkness: 0,
-    noise: 0,
-    weather: 0
-  },
-  companions: []
-};
+// Define message and story response types locally since they're specific to the API interaction
+interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface StoryResponse {
+  story: string;
+  choices: Choice[];
+  gameState: GameState;
+}
 
 export function useGameLogic() {
   const [storySegment, setStorySegment] = useState<StoryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE);
+  const [gameState, setGameState] = useState(GameMechanics.getInitialGameState());
   const [messages, setMessages] = useState<Message[]>([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [actionOutcome, setActionOutcome] = useState<string | null>(null);
@@ -50,7 +47,9 @@ export function useGameLogic() {
         } else if (ending === 'caught') {
           data.story = `${data.story}\n\nThe Stalker caught up with you. Game Over.`;
         } else if (ending === 'victory') {
-          data.story = `${data.story}\n\nYou managed to escape! Victory!`;
+          data.story = `${data.story}\n\nYou defeated The Stalker! Victory!`;
+        } else if (ending === 'survived') {
+          data.story = `${data.story}\n\nYou survived until dawn! Victory!`;
         }
       }
       
@@ -62,6 +61,7 @@ export function useGameLogic() {
       }]);
     } catch (error) {
       console.error('Error fetching story segment:', error);
+      // Create fallback response using GameMechanics initial state
       setStorySegment({
         story: 'The Stalker draws near... Perhaps we should try a different path?',
         choices: [
@@ -70,24 +70,27 @@ export function useGameLogic() {
             dc: 12,
             riskFactor: -10,
             rewardValue: 15,
-            type: 'stealth'
+            type: 'stealth',
+            logic: "Basic stealth option"
           },
           {
             text: 'Look for another way',
             dc: 10,
             riskFactor: -5,
             rewardValue: 10,
-            type: 'search'
+            type: 'search',
+            logic: "Safe search option"
           },
           {
             text: 'Face your fate',
             dc: 15,
             riskFactor: -20,
             rewardValue: 20,
-            type: 'combat'
+            type: 'combat',
+            logic: "Risky combat option"
           }
         ],
-        gameState: INITIAL_GAME_STATE
+        gameState: GameMechanics.getInitialGameState()
       });
     } finally {
       setIsLoading(false);
@@ -96,7 +99,8 @@ export function useGameLogic() {
   }, [gameState]);
 
   const resetGame = useCallback(() => {
-    setGameState(INITIAL_GAME_STATE);
+    const initialState = GameMechanics.getInitialGameState();
+    setGameState(initialState);
     setMessages([]);
     setIsGameOver(false);
     setActionOutcome(null);

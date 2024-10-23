@@ -16,8 +16,18 @@ import { GameStatus } from './game-status'
 import { GameOver } from './game-over'
 import { GameChoices } from './game-choices'
 import { useGameLogic } from '@/hooks/useGameLogic'
+import { TimeOfNight } from '@/lib/types'
+import GameProgress from './game-progress'
 
 const SearchParamsWrapper = dynamic(() => import('@/components/search-params-wrapper'), { ssr: false })
+
+const timeBackgrounds: Record<TimeOfNight, string> = {
+  dusk: 'from-orange-900 via-black to-purple-900',
+  midnight: 'from-indigo-950 via-black to-purple-950',
+  lateNight: 'from-purple-950 via-black to-blue-950',
+  nearDawn: 'from-blue-950 via-black to-indigo-950',
+  dawn: 'from-indigo-900 via-purple-900 to-orange-900'
+}
 
 export function GameComponent() {
   const router = useRouter()
@@ -70,6 +80,10 @@ export function GameComponent() {
         className="flex flex-col h-full"
       >
         <CardContent className={`flex flex-col ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} p-4 overflow-hidden`}>
+          <div className="mb-4">
+            <GameProgress gameState={gameState} />
+          </div>
+
           <GameStatus gameState={gameState} actionOutcome={actionOutcome} />
           
           <ScrollArea className={`
@@ -111,7 +125,9 @@ export function GameComponent() {
 
   return (
     <div 
-      className="fixed inset-0 bg-gradient-to-b from-orange-900 via-black to-purple-900 text-orange-100 flex flex-col"
+      className={`fixed inset-0 bg-gradient-to-b ${
+        timeBackgrounds[gameState.progress.timeOfNight]
+      } text-orange-100 flex flex-col transition-colors duration-1000`}
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
       <FloatingParticles />

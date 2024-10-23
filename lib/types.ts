@@ -1,7 +1,14 @@
 // /lib/types.ts
-export type ActionType = 'combat' | 'stealth' | 'escape' | 'search';
+export type ActionType = 'combat' | 'stealth' | 'escape' | 'search' | 'interact';
 export type StalkerPresence = 'distant' | 'hunting' | 'closingIn' | 'imminent';
 export type StatusEffect = 'injured' | 'hidden' | 'exposed';
+export type TimeOfNight = 'dusk' | 'midnight' | 'lateNight' | 'nearDawn' | 'dawn';
+
+export interface GameProgress {
+  currentTurn: number;
+  totalTurns: number;
+  timeOfNight: TimeOfNight;
+}
 
 export interface Choice {
   text: string;
@@ -18,6 +25,11 @@ export interface EnvironmentalModifiers {
   weather: number;
 }
 
+export interface Companion {
+  name: string;
+  status: 'alive' | 'injured' | 'dead';
+}
+
 export interface GameState {
   survivalScore: number;
   hasWeapon: boolean;
@@ -28,31 +40,5 @@ export interface GameState {
   statusEffects: StatusEffect[];
   environmentalModifiers: EnvironmentalModifiers;
   companions: Companion[];
-}
-
-export interface Companion {
-  name: string;
-  status: 'alive' | 'injured' | 'dead';
-}
-
-export interface StoryResponse {
-  story: string;
-  choices: Choice[];
-  gameState: GameState;
-}
-
-export interface ActionOutcome {
-  success: boolean;
-  newGameState: GameState;
-  outcomeText: string;
-}
-
-export interface GameOverState {
-  isOver: boolean;
-  ending: 'death' | 'caught' | 'victory' | '';
-}
-
-export interface Message {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  progress: GameProgress;
 }
