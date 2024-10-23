@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
-import { ArrowLeft, Skull, Key, Ghost, Heart, Brain, Footprints, Shield } from "lucide-react";
+import { ArrowLeft, Skull, Clock, Ghost, Heart, Brain, Moon, Shield } from "lucide-react";
 import { FloatingParticles } from "@/components/floating-particles";
 
 export default function TutorialComponent() {
@@ -16,7 +16,12 @@ export default function TutorialComponent() {
     {
       icon: <Ghost className="w-8 h-8" />,
       title: "The Story",
-      content: "You find yourself trapped in a haunted town on Halloween night, being hunted by an unstoppable masked killer known as 'The Stalker'. Your goal is to survive until dawn by making strategic choices, gathering vital items, and managing your survival score."
+      content: "You find yourself trapped in a haunted town on Halloween night, being hunted by an unstoppable masked killer known as 'The Stalker'. Your goal is to survive until dawn by making strategic choices, gathering vital items, and managing your survival score through 30 turns of terror."
+    },
+    {
+      icon: <Clock className="w-8 h-8" />,
+      title: "Time Progression",
+      content: "The night is divided into five phases:\n- Dusk: The horror begins (Turns 1-6)\n- Midnight: Darkness deepens (Turns 7-12)\n- Late Night: Peak danger (Turns 13-18)\n- Near Dawn: Desperate hours (Turns 19-24)\n- Dawn Approaches: Final stretch (Turns 25-30)\n\nEach choice advances time by one turn. You must survive all 30 turns to reach dawn!"
     },
     {
       icon: <Heart className="w-8 h-8" />,
@@ -26,22 +31,17 @@ export default function TutorialComponent() {
     {
       icon: <Brain className="w-8 h-8" />,
       title: "Choice Mechanics",
-      content: "Each choice comes with:\n- Difficulty Check (DC): The target number you need to succeed\n- Risk Factor: How much survival score you might lose on failure\n- Reward Value: How much survival score you gain on success\n- Type: Combat, Stealth, Escape, or Search - each affected differently by your status and items"
+      content: "Each choice comes with:\n- Difficulty Check (DC): The target number you need to succeed\n- Risk Factor: How much survival score you might lose on failure\n- Reward Value: How much survival score you gain on success\n- Type: Combat, Stealth, Escape, or Search - each affected differently by your status and items\n\nChoices become more challenging as the night progresses!"
     },
     {
       icon: <Shield className="w-8 h-8" />,
       title: "Status Effects",
-      content: "Your condition affects your chances:\n- Being injured makes actions harder\n- Hidden status helps with stealth\n- Being exposed increases difficulty\n- Environmental factors like darkness and noise impact your success chances"
+      content: "Your condition affects your chances:\n- Being injured makes actions harder\n- Hidden status helps with stealth\n- Being exposed increases difficulty\n- Environmental factors like darkness and noise impact your success chances\n\nManage your status carefully to improve your odds of survival."
     },
     {
-      icon: <Key className="w-8 h-8" />,
-      title: "Items & Victory",
-      content: "Finding key items is crucial:\n- Weapons improve your combat chances and let you face The Stalker\n- Keys can unlock escape routes\n- You can win by either:\n  • Escaping with a key (75+ survival score)\n  • Confronting The Stalker with a weapon (100+ survival score)"
-    },
-    {
-      icon: <Footprints className="w-8 h-8" />,
-      title: "The Stalker",
-      content: "The Stalker's presence increases throughout the game:\n- Distant: Low threat level\n- Hunting: Moderate threat\n- Closing In: High threat\n- Imminent: Extreme danger\nFailed actions and high tension can cause The Stalker to advance closer!"
+      icon: <Moon className="w-8 h-8" />,
+      title: "Victory Conditions",
+      content: "There are three ways to win:\n1. Survive all 30 turns until dawn (Any survival score)\n2. Confront and defeat The Stalker (Requires weapon and 100+ survival score)\n3. Find an early escape route (Requires key and 80+ survival score)\n\nChoose your strategy carefully based on the items you find and your survival score!"
     }
   ];
 
