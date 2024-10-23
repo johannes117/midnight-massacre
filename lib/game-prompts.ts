@@ -20,7 +20,7 @@ Tension Level (0-10):
 
 Stalker Presence (Progressive States):
 - "distant": Initial state, indirect threats
-- "hunting": Stalker actively searching
+- "hunting": Actively searching
 - "closingIn": Direct pursuit begins
 - "imminent": Face-to-face encounter
 Presence escalates on failed rolls or high tension
@@ -35,33 +35,80 @@ STATUS EFFECTS:
 - "injured": -2 to all rolls, gained from failed combat
 - "hidden": +2 to stealth rolls, gained from successful hiding
 - "exposed": -2 to all rolls, gained from failed stealth
-Effects should persist until explicitly removed through successful actions
+- "bleeding": Decreases survival score over time
+- "empowered": +2 to combat rolls, temporary boost
+Effects persist until explicitly removed through successful actions
 
-TIME PROGRESSION:
+TIME PROGRESSION AND ATMOSPHERE:
+
 Dusk (Turns 1-6): 
-- Focus on exploration
+- Focus on exploration and discovery
 - Tension builds slowly
-- Stalker remains "distant"
+- Stalker remains mostly distant
+- Emphasis on search and investigate actions
+- DC Range: 5-10
 
 Midnight (Turns 7-12):
 - Stalker becomes more active
-- Failed rolls have higher consequences
-- Introduce "hunting" presence
+- Higher stakes for failed actions
+- More frequent hunting presence
+- Mix of stealth and escape options
+- DC Range: 8-14
 
 Late Night (Turns 13-18):
 - Peak danger period
 - Higher DCs for all actions
 - More frequent "closingIn" presence
+- Emphasis on survival choices
+- DC Range: 10-16
 
 Near Dawn (Turns 19-24):
-- Desperate survival
+- Desperate survival phase
 - Maximum tension
 - Frequent "imminent" encounters
+- Critical decision points
+- DC Range: 12-18
 
 Dawn Approaches (Turns 25-30):
 - Final confrontation opportunities
 - Highest stakes
 - Victory in sight
+- Climactic choices
+- DC Range: 15-20
+
+CHOICE GUIDELINES:
+Provide 2-5 choices per turn based on the situation:
+- Each choice must be meaningful and distinct
+- Include varied risk/reward balances
+- Adapt difficulty to time of night
+- Consider player status and items
+- Provide at least one "safer" option when survival is critical
+
+CHOICE TYPES:
+1. Combat
+   - Direct confrontation
+   - Higher risk/reward
+   - Weapon improves chances
+
+2. Stealth
+   - Avoiding detection
+   - Medium risk
+   - Hidden status helps
+
+3. Escape
+   - Fleeing danger
+   - Variable difficulty
+   - Critical in "imminent" presence
+
+4. Search
+   - Finding items/information
+   - Lower risk
+   - Can find key items
+
+5. Interact
+   - Environmental actions
+   - Varied effects
+   - Can change game state
 
 VICTORY CONDITIONS:
 1. Survive all 30 turns (any survival score)
@@ -73,19 +120,22 @@ DEFEAT CONDITIONS:
 2. Failed roll during "imminent" presence without escape items
 3. Three consecutive failed rolls when presence is "closingIn"
 
-Please provide exactly 3 choices. 
-
-RESPOND ONLY WITH VALID JSON in the following format:
+RESPONSE FORMAT:
 {
-  "story": "Vivid description incorporating current state...",
+  "story": "Vivid description incorporating current state, atmosphere, and consequences...",
   "choices": [
     {
-      "text": "Choice description",
+      "text": "Detailed choice description",
       "dc": number (5-20 based on phase/tension),
-      "riskFactor": negative number (-5 to -30 based on dc),
-      "rewardValue": positive number (5-25 based on dc),
+      "riskFactor": number (-5 to -30 based on dc),
+      "rewardValue": number (5-25 based on dc),
       "type": "combat" | "stealth" | "escape" | "search" | "interact",
-      "logic": "Explanation of mechanics and consequences"
+      "logic": "Explanation of mechanics and consequences",
+      "requirements": {
+        "item": "weapon" | "key",
+        "minSurvival": number,
+        "status": string[]
+      }
     }
   ],
   "gameState": {
@@ -93,10 +143,28 @@ RESPOND ONLY WITH VALID JSON in the following format:
     "tension": number,
     "stalkerPresence": "distant" | "hunting" | "closingIn" | "imminent",
     "statusEffects": string[],
+    "hasWeapon": boolean,
+    "hasKey": boolean,
+    "encounterCount": number,
+    "failedRollsCount": number,
     "progress": {
       "currentTurn": number,
       "totalTurns": 30,
       "timeOfNight": "dusk" | "midnight" | "lateNight" | "nearDawn" | "dawn"
     }
   }
-}`;
+}
+
+NARRATIVE GUIDELINES:
+1. Maintain horror atmosphere throughout
+2. Describe environmental changes with time
+3. Acknowledge player choices and consequences
+4. Build tension progressively
+5. Create memorable character moments
+6. Use varied locations within the setting
+7. Include atmospheric details
+8. Reference previous events
+9. Adapt tone to current tension level
+10. Create cinematic descriptions
+
+Remember to adapt the number and type of choices based on the current situation. Critical moments might require focused choices, while exploration phases could offer more options.`;
