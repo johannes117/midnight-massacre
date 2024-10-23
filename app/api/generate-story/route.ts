@@ -2,13 +2,24 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { NextRequest } from 'next/server';
-import type { GameState, Choice, StoryResponse, Message } from '@/lib/types';
+import { GameState, Choice } from '@/lib/types';
 import { SYSTEM_PROMPT } from '@/lib/game-prompts';
+import { GameMechanics } from '@/lib/game-mechanics';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface StoryResponse {
+  story: string;
+  choices: Choice[];
+  gameState: GameState;
+}
 
 function validateChoices(choices: Choice[]): Choice[] {
   return choices.map(choice => ({
@@ -22,6 +33,7 @@ function validateChoices(choices: Choice[]): Choice[] {
 }
 
 function generateFallbackResponse(): StoryResponse {
+  const initialState = GameMechanics.getInitialGameState();
   return {
     story: "The shadows grow longer as The Stalker's presence looms... Something has gone wrong, but you must keep moving.",
     choices: [
@@ -50,25 +62,7 @@ function generateFallbackResponse(): StoryResponse {
         logic: "Low-risk search option"
       }
     ],
-    gameState: {
-      survivalScore: 100,
-      hasWeapon: false,
-      hasKey: false,
-      tension: 5,
-      encounterCount: 0,
-      stalkerPresence: 'distant',
-      statusEffects: [],
-      environmentalModifiers: {
-        darkness: 0,
-        noise: 0,
-        weather: 0
-      },
-      companions: [
-        { name: 'Alex', status: 'alive' },
-        { name: 'Jamie', status: 'alive' },
-        { name: 'Casey', status: 'alive' }
-      ]
-    }
+    gameState: initialState
   };
 }
 
@@ -86,7 +80,8 @@ export async function POST(req: NextRequest) {
       gameState: GameState;
     };
 
-    const gameStatePrompt = `Current game state (USE THIS TO INFORM YOUR CHOICE DIFFICULTY):
+    const gameStatePrompt = `Current game state (USE THIS TO INFORM YOUR CHOICES):
+- Turn: ${gameState.progress.currentTurn}/${gameState.progress.totalTurns} (${gameState.progress.timeOfNight})
 - Survival Score: ${gameState.survivalScore}${gameState.survivalScore < 50 ? ' (CRITICAL!)' : ''}
 - Stalker Presence: ${gameState.stalkerPresence}
 - Status Effects: ${gameState.statusEffects.join(', ') || 'none'}
@@ -97,12 +92,19 @@ export async function POST(req: NextRequest) {
 - Tension: ${gameState.tension}/10
 - Encounters: ${gameState.encounterCount}
 
+Time of Night Guidelines:
+${gameState.progress.timeOfNight === 'dusk' ? '- Early game: Focus on exploration and building tension' :
+  gameState.progress.timeOfNight === 'midnight' ? '- Mid game: Increase danger and encounters' :
+  gameState.progress.timeOfNight === 'lateNight' ? '- Late game: Peak danger and difficult choices' :
+  gameState.progress.timeOfNight === 'nearDawn' ? '- Near end: Push towards final confrontation' :
+  '- Dawn: Final moments of survival'}
+
 Consider these conditions when setting DCs and risk factors. Remember:
 - Low survival score should encourage including some safer options
 - Higher stalker presence should increase DCs
 - Status effects should influence available choices
 - Equipment should unlock new possibilities
-- Always match risk factors and reward values to the DC level using the guidelines above`;
+- Always match risk factors and reward values to the DC level`;
 
     const apiMessages: ChatCompletionMessageParam[] = [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -135,12 +137,17 @@ Consider these conditions when setting DCs and risk factors. Remember:
       // Validate and adjust choices
       response.choices = validateChoices(response.choices);
 
-      // Update game state while preserving current values
+      // Update game state while preserving progression
       response.gameState = {
         ...gameState,
         ...response.gameState,
         survivalScore: gameState.survivalScore,
-        tension: Math.min(10, gameState.tension)
+        tension: Math.min(10, gameState.tension),
+        progress: {
+          currentTurn: gameState.progress.currentTurn,
+          totalTurns: gameState.progress.totalTurns,
+          timeOfNight: GameMechanics.getTimeOfNight(gameState.progress.currentTurn)
+        }
       };
 
     } catch (parseError) {
