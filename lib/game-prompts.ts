@@ -33,6 +33,8 @@ VICTORY CONDITIONS:
 2. Defeat the Stalker (requires weapon and 100+ survival score)
 3. Escape early (requires key and 80+ survival score)
 
+Please provide exactly 3 choices. 
+
 RESPOND ONLY WITH VALID JSON in the following format:
 {
   "story": "Your vivid story text here, incorporating time of night...",

@@ -144,7 +144,8 @@ Consider these conditions when setting DCs and risk factors. Remember:
         survivalScore: gameState.survivalScore,
         tension: Math.min(10, gameState.tension),
         progress: {
-          ...gameState.progress,
+          currentTurn: gameState.progress.currentTurn,
+          totalTurns: gameState.progress.totalTurns,
           timeOfNight: GameMechanics.getTimeOfNight(gameState.progress.currentTurn)
         }
       };

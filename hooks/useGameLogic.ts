@@ -25,6 +25,7 @@ export function useGameLogic() {
 
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
     setIsLoading(true);
+    console.log('Current turn before fetch:', gameState.progress.currentTurn);
     
     try {
       const response = await fetch('/api/generate-story', {
@@ -37,6 +38,7 @@ export function useGameLogic() {
       });
   
       const data: StoryResponse = await response.json();
+      console.log('Turn from API response:', data.gameState.progress.currentTurn);
       
       // Check game over conditions
       const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
@@ -54,7 +56,16 @@ export function useGameLogic() {
       }
       
       setStorySegment(data);
-      setGameState(data.gameState);
+      setGameState(prevState => {
+        console.log('Updating turn from:', prevState.progress.currentTurn, 'to:', prevState.progress.currentTurn);
+        return {
+          ...data.gameState,
+          progress: {
+            ...prevState.progress,
+            timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
+          }
+        };
+      });
       setMessages(prevMessages => [...prevMessages, {
         role: 'assistant',
         content: JSON.stringify(data)
@@ -112,19 +123,22 @@ export function useGameLogic() {
   }, [fetchStorySegment]);
 
   const handleChoice = useCallback(async (choice: Choice) => {
-    // Resolve the action using game mechanics
-    const { success, newGameState, outcomeText } = GameMechanics.resolveAction(choice, gameState);
-    setActionOutcome(outcomeText);
+    console.log('Handle choice - current turn:', gameState.progress.currentTurn);
+    const { newGameState, outcomeText } = GameMechanics.resolveAction(choice, gameState);
+    console.log('After resolve action - new turn:', newGameState.progress.currentTurn);
+    
     setGameState(newGameState);
+    setActionOutcome(outcomeText);
 
-    // Modify message based on success/failure
-    const userMessage: Message = { 
-      role: 'user', 
-      content: `I choose: ${choice.text}. ${success ? 'Successfully ' : 'Failed to '}${choice.text.toLowerCase()}. ${outcomeText}` 
+    const newMessage = {
+      role: 'user' as const,
+      content: `Player chose: ${choice.text}\nOutcome: ${outcomeText}`
     };
-    const updatedMessages = [...messages, userMessage];
+
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
     await fetchStorySegment(updatedMessages);
-  }, [messages, gameState, fetchStorySegment]);
+  }, [gameState, messages, fetchStorySegment]);
 
   const handleSearchParams = useCallback((searchParams: URLSearchParams) => {
     const startGame = searchParams.get('start') === 'true';
@@ -146,13 +160,21 @@ export function useGameLogic() {
     }
   }, [handleSearchParams, fetchStorySegment]);
 
+  // Initial story fetch
+  useEffect(() => {
+    if (messages.length === 0) {
+      console.log('Initial story fetch - starting turn:', gameState.progress.currentTurn);
+      fetchStorySegment([]);
+    }
+  }, [fetchStorySegment, messages.length, gameState.progress.currentTurn]);
+
   return {
     storySegment,
     isLoading,
     gameState,
     isGameOver,
-    actionOutcome,
     handleChoice,
-    resetGame
+    resetGame,
+    actionOutcome
   };
 }
