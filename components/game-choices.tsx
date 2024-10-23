@@ -51,27 +51,30 @@ const DifficultyBadge = ({ dc }: { dc: number }) => {
 
 export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice, isLoading }) => {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 overflow-y-auto">
       {choices.map((choice, index) => (
         <motion.div
           key={index}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
+          className="min-h-[4rem]"
         >
           <Button
             onClick={() => handleChoice(choice)}
-            className="w-full bg-black/40 hover:bg-black/60 border border-orange-800/50 
-                     hover:border-orange-800 text-orange-100 p-4 rounded-lg transition-all 
-                     duration-300 ease-in-out flex flex-col items-start gap-2"
+            className="w-full h-full bg-black/40 hover:bg-black/60 
+                     border border-orange-800/50 hover:border-orange-800 
+                     text-orange-100 p-4 rounded-lg transition-all duration-300 
+                     ease-in-out flex flex-col items-start gap-2 relative
+                     overflow-visible"
             disabled={isLoading}
           >
-            <div className="w-full flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="w-full flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <ActionIcon type={choice.type} />
                 <DifficultyBadge dc={choice.dc} />
               </div>
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-2 text-xs flex-shrink-0">
                 {choice.riskFactor < -20 && (
                   <span className="text-red-400">High Risk</span>
                 )}
@@ -81,7 +84,7 @@ export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice,
               </div>
             </div>
             
-            <span className="text-left text-base sm:text-lg font-medium leading-tight">
+            <span className="text-left text-sm sm:text-base font-medium leading-tight break-words w-full">
               {choice.text}
             </span>
 

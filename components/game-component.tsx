@@ -250,7 +250,12 @@ export function GameComponent() {
         transition={{ duration: 0.3 }}
         className="flex flex-col h-full"
       >
-        <CardContent className={`flex flex-col ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} p-4 overflow-hidden`}>
+        <CardContent className={`
+          flex flex-col 
+          ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} 
+          p-4 overflow-hidden
+          relative
+        `}>
           <div className="mb-4">
             <GameProgress gameState={gameState} />
           </div>
@@ -258,14 +263,15 @@ export function GameComponent() {
           <GameStatus gameState={gameState} actionOutcome={actionOutcome} />
           
           <ScrollArea className={`
-            flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-orange-800/50
-            ${isMobile ? 'h-[45vh]' : 'max-h-[60vh]'}
+            flex-grow px-4 py-3 
+            bg-black/30 rounded-lg shadow-inner 
+            border border-orange-800/50
+            ${isMobile ? 'h-[45vh]' : 'h-[40vh]'}
           `}>
             {isLoading ? (
               <SpookyLoader />
             ) : (
               <div className="space-y-4">
-                {/* Status Effects Alert */}
                 {gameState.statusEffects.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {gameState.statusEffects.map(effect => (
@@ -274,7 +280,6 @@ export function GameComponent() {
                   </div>
                 )}
                 
-                {/* Main Story Text */}
                 <p className="text-base sm:text-lg leading-relaxed text-orange-200">
                   {storySegment?.story}
                 </p>
@@ -284,7 +289,8 @@ export function GameComponent() {
 
           {!isLoading && storySegment && (
             <div className={`
-              ${isMobile ? 'h-[45vh] overflow-y-auto mt-3' : 'mt-6'}
+              mt-4 overflow-hidden
+              ${isMobile ? 'h-[40vh]' : 'h-[calc(60vh-16rem)]'}
             `}>
               {isGameOver ? (
                 <GameOver 
@@ -293,11 +299,13 @@ export function GameComponent() {
                   resetGame={resetGame}
                 />
               ) : (
-                <GameChoices 
-                  choices={storySegment.choices}
-                  handleChoice={handleChoice}
-                  isLoading={isLoading}
-                />
+                <ScrollArea className="h-full pr-4">
+                  <GameChoices 
+                    choices={storySegment.choices}
+                    handleChoice={handleChoice}
+                    isLoading={isLoading}
+                  />
+                </ScrollArea>
               )}
             </div>
           )}

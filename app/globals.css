@@ -134,3 +134,15 @@
     font-size: 0.875rem;
   }
 }
+
+.choice-button {
+  white-space: normal;
+  height: auto;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .choice-button {
+    font-size: 0.875rem;
+  }
+}
