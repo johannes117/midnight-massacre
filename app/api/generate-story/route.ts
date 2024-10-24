@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { NextRequest } from 'next/server';
-import { GameState } from '@/lib/types';
+import { GameState, Choice, StoryResponse } from '@/lib/types';
 import { SYSTEM_PROMPT } from '@/lib/game-prompts';
 import { GameMechanics } from '@/lib/game-mechanics';
 
@@ -15,21 +15,24 @@ interface Message {
   content: string;
 }
 
-interface StoryResponse {
-  story: string;
-  choices: Array<{
-    text: string;
-    dc: number;
-    riskFactor: number;
-    rewardValue: number;
-    type: 'combat' | 'stealth' | 'escape' | 'search' | 'interact';
-    logic?: string;
-    requirements?: {
-      item?: 'weapon' | 'key';
-      minSurvival?: number;
-    };
-  }>;
-  gameState: GameState;
+// Validate the OpenAI response structure
+function isValidStoryResponse(response: unknown): response is StoryResponse {
+  const typedResponse = response as StoryResponse;
+  return (
+    typeof response === 'object' &&
+    response !== null &&
+    typeof typedResponse.story === 'string' &&
+    Array.isArray(typedResponse.choices) &&
+    typedResponse.choices.length > 0 &&
+    typedResponse.choices.every((choice: Choice) => 
+      typeof choice.text === 'string' &&
+      typeof choice.dc === 'number' &&
+      typeof choice.riskFactor === 'number' &&
+      typeof choice.rewardValue === 'number' &&
+      typeof choice.type === 'string'
+    ) &&
+    typeof typedResponse.gameState === 'object'
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -76,11 +79,13 @@ export async function POST(req: NextRequest) {
     let response: StoryResponse;
     try {
       const content = completion.choices[0]?.message?.content || '{}';
-      response = JSON.parse(content);
+      const parsedResponse = JSON.parse(content);
 
-      if (!response.story || !Array.isArray(response.choices) || !response.gameState) {
+      if (!isValidStoryResponse(parsedResponse)) {
         throw new Error('Invalid response structure');
       }
+
+      response = parsedResponse;
 
       // Update game state while preserving progression
       response.gameState = {
