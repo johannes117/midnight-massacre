@@ -36,18 +36,19 @@ export function useGameLogic() {
     setIsLoading(true);
     
     try {
-      // Use the current game state from ref for the API call
       const response = await fetch('/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: currentMessages,
-          gameState: currentGameStateRef.current // Use ref instead of state
+          gameState: currentGameStateRef.current
         }),
       });
-  
-      const data: StoryResponse = await response.json();
-      
+
+      const responseText = await response.text();
+      console.log('Response Text:', responseText); // Log the response text
+
+      const data: StoryResponse = JSON.parse(responseText); // Parse the response text
       const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
       if (isOver) {
         setIsGameOver(true);
