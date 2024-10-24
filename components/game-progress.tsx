@@ -16,11 +16,11 @@ const timeIcons: Record<TimeOfNight, JSX.Element> = {
 };
 
 const timeColors: Record<TimeOfNight, string> = {
-  dusk: 'from-orange-600/20 to-purple-900/20',
-  midnight: 'from-indigo-900/20 to-purple-900/20',
-  lateNight: 'from-purple-900/20 to-blue-900/20',
-  nearDawn: 'from-blue-900/20 to-indigo-400/20',
-  dawn: 'from-indigo-400/20 to-orange-400/20'
+  dusk: 'from-orange-600/50 to-purple-900/50',
+  midnight: 'from-indigo-900/50 to-purple-900/50',
+  lateNight: 'from-purple-900/50 to-blue-900/50',
+  nearDawn: 'from-blue-900/50 to-indigo-400/50',
+  dawn: 'from-indigo-400/50 to-orange-400/50'
 };
 
 export default function GameProgress({ gameState }: GameProgressProps) {
