@@ -1,9 +1,7 @@
-// /hooks/useGameLogic.ts
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Choice, GameState } from '@/lib/types';
 import { GameMechanics } from '@/lib/game-mechanics';
 
-// Define message and story response types locally since they're specific to the API interaction
 interface Message {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -22,25 +20,34 @@ export function useGameLogic() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [actionOutcome, setActionOutcome] = useState<string | null>(null);
+  
+  const isInitialized = useRef(false);
+  const initialFetchComplete = useRef(false);
+  // Add ref to track the current game state for accurate updates
+  const currentGameStateRef = useRef(gameState);
+
+  // Update ref when gameState changes
+  useEffect(() => {
+    currentGameStateRef.current = gameState;
+  }, [gameState]);
 
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
+    if (isLoading) return;
     setIsLoading(true);
-    console.log('Current turn before fetch:', gameState.progress.currentTurn);
     
     try {
+      // Use the current game state from ref for the API call
       const response = await fetch('/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: currentMessages,
-          gameState 
+          gameState: currentGameStateRef.current // Use ref instead of state
         }),
       });
   
       const data: StoryResponse = await response.json();
-      console.log('Turn from API response:', data.gameState.progress.currentTurn);
       
-      // Check game over conditions
       const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
       if (isOver) {
         setIsGameOver(true);
@@ -56,23 +63,26 @@ export function useGameLogic() {
       }
       
       setStorySegment(data);
-      setGameState(prevState => {
-        console.log('Updating turn from:', prevState.progress.currentTurn, 'to:', prevState.progress.currentTurn);
-        return {
-          ...data.gameState,
-          progress: {
-            ...prevState.progress,
-            timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
-          }
-        };
-      });
+      
+      // Preserve critical game state values while updating with new data
+      setGameState(prevState => ({
+        ...data.gameState,
+        survivalScore: prevState.survivalScore, // Preserve current survival score
+        tension: prevState.tension, // Preserve current tension
+        progress: {
+          ...prevState.progress,
+          currentTurn: prevState.progress.currentTurn,
+          timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
+        }
+      }));
+      
       setMessages(prevMessages => [...prevMessages, {
         role: 'assistant',
         content: JSON.stringify(data)
       }]);
     } catch (error) {
       console.error('Error fetching story segment:', error);
-      // Create fallback response using GameMechanics initial state
+      // Fallback maintains current game state values
       setStorySegment({
         story: 'The Stalker draws near... Perhaps we should try a different path?',
         choices: [
@@ -91,43 +101,26 @@ export function useGameLogic() {
             rewardValue: 10,
             type: 'search',
             logic: "Safe search option"
-          },
-          {
-            text: 'Face your fate',
-            dc: 15,
-            riskFactor: -20,
-            rewardValue: 20,
-            type: 'combat',
-            logic: "Risky combat option"
           }
         ],
-        gameState: GameMechanics.getInitialGameState()
+        gameState: currentGameStateRef.current // Use current state for fallback
       });
     } finally {
       setIsLoading(false);
       setActionOutcome(null);
+      initialFetchComplete.current = true;
     }
-  }, [gameState]);
-
-  const resetGame = useCallback(() => {
-    const initialState = GameMechanics.getInitialGameState();
-    setGameState(initialState);
-    setMessages([]);
-    setIsGameOver(false);
-    setActionOutcome(null);
-    const initialMessage: Message = { 
-      role: 'user', 
-      content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
-    };
-    fetchStorySegment([initialMessage]);
-  }, [fetchStorySegment]);
+  }, [isLoading]);
 
   const handleChoice = useCallback(async (choice: Choice) => {
-    console.log('Handle choice - current turn:', gameState.progress.currentTurn);
-    const { newGameState, outcomeText } = GameMechanics.resolveAction(choice, gameState);
-    console.log('After resolve action - new turn:', newGameState.progress.currentTurn);
+    // Calculate new state based on the current state from ref
+    const { newGameState, outcomeText } = GameMechanics.resolveAction(choice, currentGameStateRef.current);
     
+    // Update game state first
     setGameState(newGameState);
+    // Update ref immediately to ensure latest state for next updates
+    currentGameStateRef.current = newGameState;
+    
     setActionOutcome(outcomeText);
 
     const newMessage = {
@@ -137,36 +130,44 @@ export function useGameLogic() {
 
     const updatedMessages = [...messages, newMessage];
     setMessages(updatedMessages);
+    
+    // Small delay to ensure state updates are processed
+    await new Promise(resolve => setTimeout(resolve, 0));
     await fetchStorySegment(updatedMessages);
-  }, [gameState, messages, fetchStorySegment]);
+  }, [messages, fetchStorySegment]);
 
-  const handleSearchParams = useCallback((searchParams: URLSearchParams) => {
-    const startGame = searchParams.get('start') === 'true';
-    if (startGame && messages.length === 0) {
-      const initialMessage: Message = { 
-        role: 'user', 
-        content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
-      };
-      return initialMessage;
-    }
-    return null;
-  }, [messages]);
+  const resetGame = useCallback(() => {
+    const initialState = GameMechanics.getInitialGameState();
+    setGameState(initialState);
+    currentGameStateRef.current = initialState; // Update ref with initial state
+    setMessages([]);
+    setIsGameOver(false);
+    setActionOutcome(null);
+    isInitialized.current = false;
+    initialFetchComplete.current = false;
+    
+    const initialMessage: Message = { 
+      role: 'user', 
+      content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
+    };
+    fetchStorySegment([initialMessage]);
+  }, [fetchStorySegment]);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const initialMessage = handleSearchParams(searchParams);
-    if (initialMessage) {
-      fetchStorySegment([initialMessage]);
+    if (!isInitialized.current && !initialFetchComplete.current) {
+      isInitialized.current = true;
+      const searchParams = new URLSearchParams(window.location.search);
+      const startGame = searchParams.get('start') === 'true';
+      
+      if (startGame) {
+        const initialMessage: Message = { 
+          role: 'user', 
+          content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
+        };
+        fetchStorySegment([initialMessage]);
+      }
     }
-  }, [handleSearchParams, fetchStorySegment]);
-
-  // Initial story fetch
-  useEffect(() => {
-    if (messages.length === 0) {
-      console.log('Initial story fetch - starting turn:', gameState.progress.currentTurn);
-      fetchStorySegment([]);
-    }
-  }, [fetchStorySegment, messages.length, gameState.progress.currentTurn]);
+  }, [fetchStorySegment]);
 
   return {
     storySegment,

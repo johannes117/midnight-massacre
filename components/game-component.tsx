@@ -30,6 +30,50 @@ const timeBackgrounds: Record<TimeOfNight, string> = {
   dawn: 'from-indigo-900 via-purple-900 to-orange-900'
 }
 
+// Update the safeGameState helper at the top of your game-component.tsx file
+const safeGameState = (gameState: GameState | null): GameState => {
+  const defaultState: GameState = {
+    survivalScore: 100,
+    tension: 0,
+    stalkerPresence: 'distant',
+    statusEffects: [],
+    hasWeapon: false,
+    hasKey: false,
+    encounterCount: 0,
+    failedRollsCount: 0,
+    progress: {
+      currentTurn: 1,
+      totalTurns: 30,
+      timeOfNight: 'dusk'
+    },
+    // Add the missing properties
+    environmentalModifiers: {
+      darkness: 0,
+      noise: 0,
+      weather: 0
+    },
+    companions: []
+  };
+
+  if (!gameState) return defaultState;
+  
+  return {
+    ...defaultState,
+    ...gameState,
+    // Ensure nested objects are properly merged
+    statusEffects: gameState.statusEffects || [],
+    progress: {
+      ...defaultState.progress,
+      ...(gameState.progress || {})
+    },
+    environmentalModifiers: {
+      ...defaultState.environmentalModifiers,
+      ...(gameState.environmentalModifiers || {})
+    },
+    companions: gameState.companions || []
+  };
+};
+
 // Helper components for the status panel
 const StatusEffectIcon = ({ effect }: { effect: StatusEffect }) => {
   const icons = {
@@ -255,10 +299,13 @@ export function GameComponent() {
           ${isMobile ? 'h-[calc(100vh-8rem)]' : 'h-auto'}
         `}>
           <div className="mb-4">
-            <GameProgress gameState={gameState} />
+            <GameProgress gameState={safeGameState(gameState)} />
           </div>
 
-          <GameStatus gameState={gameState} actionOutcome={actionOutcome} />
+          <GameStatus 
+            gameState={safeGameState(gameState)} 
+            actionOutcome={actionOutcome} 
+          />
           
           <ScrollArea className={`
             flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner 
@@ -269,9 +316,9 @@ export function GameComponent() {
               <SpookyLoader />
             ) : (
               <div className="space-y-4">
-                {gameState.statusEffects.length > 0 && (
+                {safeGameState(gameState).statusEffects?.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {gameState.statusEffects.map(effect => (
+                    {safeGameState(gameState).statusEffects.map(effect => (
                       <StatusEffectIcon key={effect} effect={effect} />
                     ))}
                   </div>
@@ -314,7 +361,7 @@ export function GameComponent() {
   return (
     <div 
       className={`fixed inset-0 bg-gradient-to-b ${
-        timeBackgrounds[gameState.progress.timeOfNight]
+        timeBackgrounds[safeGameState(gameState).progress.timeOfNight]
       } text-orange-100 flex flex-col transition-colors duration-1000`}
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
@@ -334,7 +381,7 @@ export function GameComponent() {
           
           <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/90 border-orange-800">
             <SheetTitle className="text-lg font-semibold text-orange-400 mb-4">Game Status</SheetTitle>
-            <StatusPanel gameState={gameState} />
+            <StatusPanel gameState={safeGameState(gameState)} />
           </SheetContent>
         </Sheet>
         
@@ -379,18 +426,18 @@ export function GameComponent() {
             {/* Survival Score */}
             <div className="flex items-center gap-2">
               <Heart className={`w-4 h-4 ${
-                gameState.survivalScore > 80 ? 'text-green-500' :
-                gameState.survivalScore > 50 ? 'text-yellow-500' :
+                safeGameState(gameState).survivalScore > 80 ? 'text-green-500' :
+                safeGameState(gameState).survivalScore > 50 ? 'text-yellow-500' :
                 'text-red-500'
               }`} />
               <div className="w-16 bg-black/30 rounded-full h-2">
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${
-                    gameState.survivalScore > 80 ? 'bg-green-500' :
-                    gameState.survivalScore > 50 ? 'bg-yellow-500' :
+                    safeGameState(gameState).survivalScore > 80 ? 'bg-green-500' :
+                    safeGameState(gameState).survivalScore > 50 ? 'bg-yellow-500' :
                     'bg-red-500'
                   }`}
-                  style={{ width: `${gameState.survivalScore}%` }}
+                  style={{ width: `${safeGameState(gameState).survivalScore}%` }}
                 />
               </div>
             </div>
@@ -398,16 +445,16 @@ export function GameComponent() {
             {/* Tension Level */}
             <div className="flex items-center gap-2">
               <Skull className={`w-4 h-4 ${
-                gameState.tension >= 8 ? 'text-red-500' :
-                gameState.tension >= 5 ? 'text-orange-500' :
+                safeGameState(gameState).tension >= 8 ? 'text-red-500' :
+                safeGameState(gameState).tension >= 5 ? 'text-orange-500' :
                 'text-yellow-500'
               }`} />
-              <TensionMeter tension={gameState.tension} />
+              <TensionMeter tension={safeGameState(gameState).tension} />
             </div>
 
             {/* Status Effects Icons */}
             <div className="flex gap-1">
-              {gameState.statusEffects.map(effect => (
+              {safeGameState(gameState).statusEffects.map(effect => (
                 <motion.div
                   key={effect}
                   initial={{ scale: 0 }}
@@ -428,7 +475,7 @@ export function GameComponent() {
 
       {/* Critical Alerts */}
       <AnimatePresence>
-        {gameState.tension >= 8 && (
+        {safeGameState(gameState).tension >= 8 && (
           <motion.div
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -490,11 +537,11 @@ export function GameComponent() {
         <div className="fixed bottom-4 left-4 p-2 bg-black/90 rounded border border-orange-800 text-xs text-orange-400">
           <pre>
             {JSON.stringify({
-              turn: gameState.progress.currentTurn,
-              time: gameState.progress.timeOfNight,
-              tension: gameState.tension,
-              presence: gameState.stalkerPresence,
-              fails: gameState.failedRollsCount
+              turn: safeGameState(gameState).progress.currentTurn,
+              time: safeGameState(gameState).progress.timeOfNight,
+              tension: safeGameState(gameState).tension,
+              presence: safeGameState(gameState).stalkerPresence,
+              fails: safeGameState(gameState).failedRollsCount
             }, null, 2)}
           </pre>
         </div>

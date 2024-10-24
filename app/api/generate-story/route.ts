@@ -1,8 +1,7 @@
-// /app/api/generate-story/route.ts
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { NextRequest } from 'next/server';
-import { GameState, Choice } from '@/lib/types';
+import { GameState } from '@/lib/types';
 import { SYSTEM_PROMPT } from '@/lib/game-prompts';
 import { GameMechanics } from '@/lib/game-mechanics';
 
@@ -10,6 +9,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Define the Message type
 interface Message {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -17,54 +17,19 @@ interface Message {
 
 interface StoryResponse {
   story: string;
-  choices: Choice[];
+  choices: Array<{
+    text: string;
+    dc: number;
+    riskFactor: number;
+    rewardValue: number;
+    type: 'combat' | 'stealth' | 'escape' | 'search' | 'interact';
+    logic?: string;
+    requirements?: {
+      item?: 'weapon' | 'key';
+      minSurvival?: number;
+    };
+  }>;
   gameState: GameState;
-}
-
-function validateChoices(choices: Choice[]): Choice[] {
-  // Ensure we have at least one choice
-  if (!Array.isArray(choices) || choices.length === 0) {
-    throw new Error('No choices provided');
-  }
-
-  return choices.map(choice => ({
-    ...choice,
-    // Ensure DC is within bounds
-    dc: Math.min(20, Math.max(1, choice.dc)),
-    // Ensure risk factor is within bounds
-    riskFactor: Math.min(-5, Math.max(-30, choice.riskFactor)),
-    // Ensure reward value is within bounds
-    rewardValue: Math.min(25, Math.max(5, choice.rewardValue)),
-    // Validate choice type
-    type: ['combat', 'stealth', 'escape', 'search', 'interact'].includes(choice.type) ? 
-      choice.type : 'search'
-  }));
-}
-
-function generateFallbackResponse(): StoryResponse {
-  const initialState = GameMechanics.getInitialGameState();
-  return {
-    story: "The shadows grow longer as The Stalker's presence looms... Something has gone wrong, but you must keep moving.",
-    choices: [
-      {
-        text: "Hide in the nearest room",
-        dc: 7,
-        riskFactor: -10,
-        rewardValue: 10,
-        type: 'stealth',
-        logic: "Basic stealth option with moderate risk/reward"
-      },
-      {
-        text: "Make a run for it",
-        dc: 14,
-        riskFactor: -20,
-        rewardValue: 15,
-        type: 'escape',
-        logic: "High-risk escape attempt"
-      }
-    ],
-    gameState: initialState
-  };
 }
 
 export async function POST(req: NextRequest) {
@@ -85,34 +50,27 @@ export async function POST(req: NextRequest) {
 - Turn: ${gameState.progress.currentTurn}/${gameState.progress.totalTurns} (${gameState.progress.timeOfNight})
 - Survival Score: ${gameState.survivalScore}${gameState.survivalScore < 50 ? ' (CRITICAL!)' : ''}
 - Stalker Presence: ${gameState.stalkerPresence}
-- Status Effects: ${gameState.statusEffects.join(', ') || 'none'}
+- Status Effects: ${gameState.statusEffects?.join(', ') || 'none'}
 - Items: ${[
     gameState.hasWeapon && 'weapon',
     gameState.hasKey && 'key'
   ].filter(Boolean).join(', ') || 'none'}
 - Tension: ${gameState.tension}/10
-- Encounters: ${gameState.encounterCount}
+- Encounters: ${gameState.encounterCount}`;
 
-Time of Night Guidelines:
-${gameState.progress.timeOfNight === 'dusk' ? '- Early game: Focus on exploration and building tension' :
-  gameState.progress.timeOfNight === 'midnight' ? '- Mid game: Increase danger and encounters' :
-  gameState.progress.timeOfNight === 'lateNight' ? '- Late game: Peak danger and difficult choices' :
-  gameState.progress.timeOfNight === 'nearDawn' ? '- Near end: Push towards final confrontation' :
-  '- Dawn: Final moments of survival'}`;
+    const systemInstructions = `${SYSTEM_PROMPT}\n\nIMPORTANT: You must respond with valid JSON in the following format: { "story": string, "choices": Choice[], "gameState": GameState }`;
 
     const apiMessages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemInstructions },
       { role: 'system', content: gameStatePrompt },
-      ...messages.map(msg => ({
-        role: msg.role as 'system' | 'user' | 'assistant',
-        content: msg.content
-      }))
+      ...messages
     ];
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: apiMessages,
       temperature: 0.8,
+      response_format: { type: "json_object" }
     });
 
     let response: StoryResponse;
@@ -123,9 +81,6 @@ ${gameState.progress.timeOfNight === 'dusk' ? '- Early game: Focus on exploratio
       if (!response.story || !Array.isArray(response.choices) || !response.gameState) {
         throw new Error('Invalid response structure');
       }
-
-      // Validate and adjust choices
-      response.choices = validateChoices(response.choices);
 
       // Update game state while preserving progression
       response.gameState = {
@@ -148,10 +103,24 @@ ${gameState.progress.timeOfNight === 'dusk' ? '- Early game: Focus on exploratio
     return Response.json(response);
   } catch (error) {
     console.error('Error generating story:', error);
+    // Return a fallback response that matches our schema
     return Response.json(
       {
         error: error instanceof Error ? error.message : 'An error occurred',
-        fallback: generateFallbackResponse()
+        fallback: {
+          story: "The shadows grow longer... Something has gone wrong, but you must keep moving.",
+          choices: [
+            {
+              text: "Hide in the nearest room",
+              dc: 7,
+              riskFactor: -10,
+              rewardValue: 10,
+              type: "stealth",
+              logic: "Basic stealth option with moderate risk/reward"
+            }
+          ],
+          gameState: GameMechanics.getInitialGameState()
+        }
       },
       { status: 500 }
     );

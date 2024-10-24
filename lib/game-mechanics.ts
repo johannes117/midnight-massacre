@@ -189,61 +189,52 @@ export class GameMechanics {
     const modifier = this.getCircumstantialModifier(gameState, choice);
     const finalRoll = roll + modifier;
     const success = finalRoll >= choice.dc;
-
+  
     // Calculate survival score change
     const survivalDelta = success 
       ? Math.min(25, Math.ceil(choice.dc / 4) * 5)
       : Math.max(-30, choice.riskFactor);
-
-    // Update game state
-    const newGameState = { ...gameState };
-
-    // Update failed rolls count
-    newGameState.failedRollsCount = success ? 0 : gameState.failedRollsCount + 1;
-
-    // Update core stats
-    newGameState.survivalScore = Math.max(
-      this.MIN_SURVIVAL_SCORE,
-      Math.min(this.MAX_SURVIVAL_SCORE, gameState.survivalScore + survivalDelta)
-    );
-
-    // Update tension
-    newGameState.tension = this.updateTension(
-      gameState.tension,
-      success,
-      choice,
-      gameState.stalkerPresence
-    );
-
-    // Update stalker presence
-    newGameState.stalkerPresence = this.updateStalkerPresence(
-      gameState.stalkerPresence,
-      success,
-      newGameState.tension
-    );
-
-    // Update status effects
-    newGameState.statusEffects = this.updateStatusEffects(
-      gameState.statusEffects,
-      success,
-      choice
-    );
-
-    // Update encounter count
-    if (choice.type === 'combat' || gameState.stalkerPresence === 'imminent') {
-      newGameState.encounterCount++;
-    }
-
-    // Update turn counter
-    newGameState.progress = {
-      currentTurn: gameState.progress.currentTurn + 1,
-      totalTurns: this.TOTAL_TURNS,
-      timeOfNight: this.getTimeOfNight(gameState.progress.currentTurn + 1)
+  
+    // Create new state object to avoid mutations
+    const newGameState = {
+      ...gameState,
+      // Ensure we're properly calculating new values based on current state
+      survivalScore: Math.max(
+        this.MIN_SURVIVAL_SCORE,
+        Math.min(this.MAX_SURVIVAL_SCORE, gameState.survivalScore + survivalDelta)
+      ),
+      tension: this.updateTension(
+        gameState.tension,
+        success,
+        choice,
+        gameState.stalkerPresence
+      ),
+      statusEffects: this.updateStatusEffects(
+        gameState.statusEffects,
+        success,
+        choice
+      ),
+      stalkerPresence: this.updateStalkerPresence(
+        gameState.stalkerPresence,
+        success,
+        gameState.tension
+      ),
+      failedRollsCount: success ? 0 : gameState.failedRollsCount + 1,
+      encounterCount: (choice.type === 'combat' || gameState.stalkerPresence === 'imminent')
+        ? gameState.encounterCount + 1
+        : gameState.encounterCount,
+      progress: {
+        ...gameState.progress,
+        currentTurn: gameState.progress.currentTurn + 1,
+        timeOfNight: this.getTimeOfNight(gameState.progress.currentTurn + 1)
+      }
     };
-
-    // Generate outcome text
-    const outcomeText = `${success ? 'Success' : 'Failure'}! (Rolled ${roll} + ${modifier} = ${finalRoll}, needed ${choice.dc})`;
-
+  
+    // Generate outcome text with more detail
+    const outcomeText = `${success ? 'Success' : 'Failure'}! (Rolled ${roll} + ${modifier} = ${finalRoll}, needed ${choice.dc}). ${
+      survivalDelta > 0 ? `Gained ${survivalDelta}` : `Lost ${Math.abs(survivalDelta)}`
+    } survival points.`;
+  
     return { success, newGameState, outcomeText };
   }
 
