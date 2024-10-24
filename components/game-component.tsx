@@ -296,7 +296,7 @@ export function GameComponent() {
       >
         <CardContent className={`
           flex flex-col p-4 overflow-hidden relative
-          ${isMobile ? 'h-[calc(100vh-8rem)]' : 'h-auto'}
+          ${isMobile ? 'h-[calc(100vh-8rem)]' : 'h-[80vh]'}
         `}>
           <div className="mb-4">
             <GameProgress gameState={safeGameState(gameState)} />
@@ -310,7 +310,7 @@ export function GameComponent() {
           <ScrollArea className={`
             flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner 
             border border-orange-800/50
-            ${isMobile ? 'h-[35vh]' : 'min-h-[200px] max-h-[40vh]'}
+            ${isMobile ? 'h-[35vh]' : 'h-[35vh]'}
           `}>
             {isLoading ? (
               <SpookyLoader />
@@ -334,7 +334,7 @@ export function GameComponent() {
           {!isLoading && storySegment && (
             <div className={`
               mt-4 overflow-hidden
-              ${isMobile ? 'h-[35vh]' : 'min-h-[150px] max-h-[calc(40vh-2rem)]'}
+              ${isMobile ? 'h-[35vh]' : 'h-[30vh]'}
             `}>
               {isGameOver ? (
                 <GameOver 
