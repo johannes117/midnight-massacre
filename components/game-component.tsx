@@ -445,46 +445,48 @@ export function GameComponent() {
       </AnimatePresence>
 
       {/* Quit Game Confirmation Dialog */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            className="fixed bottom-4 right-4 text-orange-400 hover:text-orange-300 bg-black/30 hover:bg-black/50"
-          >
-            <Home className="h-5 w-5 mr-2" />
-            Quit Game
-          </Button>
-        </SheetTrigger>
-        
-        <SheetContent side="bottom" className="bg-black/90 border-orange-800">
-          <div className="space-y-4 text-center">
-            <SheetTitle className="text-orange-400">Quit Game?</SheetTitle>
-            <p className="text-orange-200">
-              Are you sure you want to quit? Your progress will be lost.
-            </p>
-            <div className="flex justify-center gap-4">
-              <Button
-                variant="ghost"
-                onClick={() => router.push('/')}
-                className="bg-red-900/50 hover:bg-red-800/70 text-orange-100"
-              >
-                Quit to Menu
-              </Button>
-              <SheetTrigger asChild>
+      {!isMobile && (
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              className="fixed bottom-4 right-4 text-orange-400 hover:text-orange-300 bg-black/30 hover:bg-black/50"
+            >
+              <Home className="h-5 w-5 mr-2" />
+              Quit Game
+            </Button>
+          </SheetTrigger>
+          
+          <SheetContent side="bottom" className="bg-black/90 border-orange-800">
+            <div className="space-y-4 text-center">
+              <SheetTitle className="text-orange-400">Quit Game?</SheetTitle>
+              <p className="text-orange-200">
+                Are you sure you want to quit? Your progress will be lost.
+              </p>
+              <div className="flex justify-center gap-4">
                 <Button
                   variant="ghost"
-                  className="bg-orange-900/50 hover:bg-orange-800/70 text-orange-100"
+                  onClick={() => router.push('/')}
+                  className="bg-red-900/50 hover:bg-red-800/70 text-orange-100"
                 >
-                  Continue Playing
+                  Quit to Menu
                 </Button>
-              </SheetTrigger>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="bg-orange-900/50 hover:bg-orange-800/70 text-orange-100"
+                  >
+                    Continue Playing
+                  </Button>
+                </SheetTrigger>
+              </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
+      )}
 
-      {/* Debug Mode Panel (only in development) */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* Debug Mode Panel (only in development and non-mobile) */}
+      {process.env.NODE_ENV === 'development' && !isMobile && (
         <div className="fixed bottom-4 left-4 p-2 bg-black/90 rounded border border-orange-800 text-xs text-orange-400">
           <pre>
             {JSON.stringify({
