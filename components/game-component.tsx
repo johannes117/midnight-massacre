@@ -248,26 +248,16 @@ export function GameComponent() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.3 }}
-        className="flex flex-col h-full"
+        className="flex flex-col"
       >
-        <CardContent className={`
-          flex flex-col 
-          ${isMobile ? 'h-[calc(100vh-3rem)]' : 'h-full'} 
-          p-4 overflow-hidden
-          relative
-        `}>
+        <CardContent className="flex flex-col p-4 overflow-hidden relative">
           <div className="mb-4">
             <GameProgress gameState={gameState} />
           </div>
 
           <GameStatus gameState={gameState} actionOutcome={actionOutcome} />
           
-          <ScrollArea className={`
-            flex-grow px-4 py-3 
-            bg-black/30 rounded-lg shadow-inner 
-            border border-orange-800/50
-            ${isMobile ? 'h-[45vh]' : 'h-[40vh]'}
-          `}>
+          <ScrollArea className="flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-orange-800/50 min-h-[200px] max-h-[40vh]">
             {isLoading ? (
               <SpookyLoader />
             ) : (
@@ -288,10 +278,7 @@ export function GameComponent() {
           </ScrollArea>
 
           {!isLoading && storySegment && (
-            <div className={`
-              mt-4 overflow-hidden
-              ${isMobile ? 'h-[40vh]' : 'h-[calc(60vh-16rem)]'}
-            `}>
+            <div className="mt-4 min-h-[150px] max-h-[calc(40vh-2rem)] overflow-hidden">
               {isGameOver ? (
                 <GameOver 
                   isVictory={storySegment?.story.toLowerCase().includes('victory') || 
@@ -360,12 +347,15 @@ export function GameComponent() {
           {() => (
             <Card className={`
               bg-black/70 border-orange-800 shadow-lg backdrop-blur-sm overflow-hidden
-              ${isMobile ? 'h-full rounded-none' : 'w-full max-w-2xl'}
+              ${isMobile 
+                ? 'h-full rounded-none' 
+                : 'w-full max-w-2xl flex flex-col'
+              }
             `}>
               {renderGameContent()}
             </Card>
           )}
-          </SearchParamsWrapper>
+        </SearchParamsWrapper>
       </div>
 
       {/* Quick Status Bar - Mobile Only */}
