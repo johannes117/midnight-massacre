@@ -1,6 +1,5 @@
 import { OpenAIStream, StreamingTextResponse } from 'ai';
 import OpenAI from 'openai';
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { GameState, Choice, StoryResponse } from '@/lib/types';
 import { SYSTEM_PROMPT } from '@/lib/game-prompts';
 import { GameMechanics } from '@/lib/game-mechanics';
@@ -11,7 +10,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Type guard for validating the response structure
 function isValidStoryResponse(response: unknown): response is StoryResponse {
   const typedResponse = response as Partial<StoryResponse>;
   return (
@@ -31,11 +29,6 @@ function isValidStoryResponse(response: unknown): response is StoryResponse {
   );
 }
 
-interface RequestBody {
-  messages: { role: string; content: string }[];
-  gameState: GameState;
-}
-
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return new Response(
@@ -45,9 +38,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { messages, gameState } = await req.json() as RequestBody;
+    const { messages, gameState } = await req.json() as {
+      messages: { role: string; content: string }[];
+      gameState: GameState;
+    };
 
-    const gameStatePrompt = `Current game state:
+    const systemPrompt = `${SYSTEM_PROMPT}\n\nIMPORTANT: You must respond with a valid JSON object that includes 'story', 'choices', and 'gameState' fields. Your entire response must be parseable JSON.`;
+
+    const gameStatePrompt = `Current game state (use this to generate JSON response):
 - Turn: ${gameState.progress.currentTurn}/${gameState.progress.totalTurns} (${gameState.progress.timeOfNight})
 - Survival Score: ${gameState.survivalScore}${gameState.survivalScore < 50 ? ' (CRITICAL!)' : ''}
 - Stalker Presence: ${gameState.stalkerPresence}
@@ -56,36 +54,32 @@ export async function POST(req: Request) {
 - Tension: ${gameState.tension}/10
 - Encounters: ${gameState.encounterCount}`;
 
-    const formattedMessages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'system', content: gameStatePrompt },
-      ...messages.map(msg => ({
-        role: msg.role as 'system' | 'user' | 'assistant',
-        content: msg.content
-      }))
-    ];
-
     const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: formattedMessages,
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'system', content: gameStatePrompt },
+        ...messages.map(msg => ({
+          role: msg.role as 'system' | 'user' | 'assistant',
+          content: msg.content
+        }))
+      ],
       stream: true,
       response_format: { type: "json_object" },
       temperature: 0.8,
       max_tokens: 1000,
     });
 
-    let accumulatedResponse = '';
+    let buffer = '';
 
     const stream = OpenAIStream(response, {
       onToken: (token) => {
-        // Accumulate the response
-        accumulatedResponse += token;
-        
+        buffer += token;
+      },
+      async onCompletion() {
         try {
-          // Try to parse complete JSON objects as they come in
-          const parsedResponse = JSON.parse(accumulatedResponse);
+          const parsedResponse = JSON.parse(buffer);
           if (isValidStoryResponse(parsedResponse)) {
-            // Update gameState inline
             parsedResponse.gameState = {
               ...gameState,
               ...parsedResponse.gameState,
@@ -97,13 +91,11 @@ export async function POST(req: Request) {
                 timeOfNight: GameMechanics.getTimeOfNight(gameState.progress.currentTurn)
               }
             };
+            buffer = JSON.stringify(parsedResponse);
           }
-        } catch {
-          // Ignore parsing errors for incomplete JSON
+        } catch (error) {
+          console.error('Error processing response:', error);
         }
-      },
-      onCompletion: () => {
-        // No return value needed
       },
     });
 
@@ -129,9 +121,7 @@ export async function POST(req: Request) {
       }),
       { 
         status: 500,
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       }
     );
   }

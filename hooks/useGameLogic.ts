@@ -50,75 +50,81 @@ export function useGameLogic() {
         throw new Error('No reader available for streaming response');
       }
 
-      let result = '';
-      // Process the stream
+      let buffer = '';
+      const decoder = new TextDecoder();
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-        result += new TextDecoder().decode(value);
         
-        // Try to parse partial results for progressive updates
+        if (done) {
+          break;
+        }
+
+        // Decode the chunk and add it to our buffer
+        buffer += decoder.decode(value, { stream: true });
+
+        // Try to find complete JSON objects
         try {
-          const partialData = JSON.parse(result);
-          if (partialData.story) {
+          // Clean the buffer of any potential prefixes
+          const jsonStartIndex = buffer.indexOf('{');
+          if (jsonStartIndex > 0) {
+            buffer = buffer.slice(jsonStartIndex);
+          }
+
+          const data = JSON.parse(buffer);
+          if (data.story) {
+            // Update story segment with the latest complete data
             setStorySegment(prevSegment => ({
               ...prevSegment,
-              ...partialData,
+              ...data,
             }));
+
+            // Check game over conditions
+            const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
+            if (isOver) {
+              setIsGameOver(true);
+              switch (ending) {
+                case 'death':
+                  data.story = `${data.story}\n\nYour survival score reached zero. Game Over.`;
+                  break;
+                case 'caught':
+                  data.story = `${data.story}\n\nThe Stalker caught up with you. Game Over.`;
+                  break;
+                case 'victory':
+                  data.story = `${data.story}\n\nYou defeated The Stalker! Victory!`;
+                  break;
+                case 'survived':
+                  data.story = `${data.story}\n\nYou survived until dawn! Victory!`;
+                  break;
+                case 'escaped':
+                  data.story = `${data.story}\n\nYou found a way to escape! Victory!`;
+                  break;
+              }
+            }
+
+            // Update game state
+            setGameState(prevState => ({
+              ...data.gameState,
+              survivalScore: prevState.survivalScore,
+              tension: Math.min(10, prevState.tension),
+              progress: {
+                ...prevState.progress,
+                currentTurn: prevState.progress.currentTurn,
+                timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
+              }
+            }));
+
+            // Add to message history
+            setMessages(prevMessages => [...prevMessages, {
+              role: 'assistant',
+              content: JSON.stringify(data)
+            }]);
           }
         } catch {
-          // Ignore parsing errors for incomplete JSON
+          // Incomplete JSON object, continue accumulating
           continue;
         }
       }
-
-      // Parse the complete response
-      const data: StoryResponse = JSON.parse(result);
-      
-      // Check game over conditions
-      const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
-      if (isOver) {
-        setIsGameOver(true);
-        // Append appropriate ending text
-        switch (ending) {
-          case 'death':
-            data.story = `${data.story}\n\nYour survival score reached zero. Game Over.`;
-            break;
-          case 'caught':
-            data.story = `${data.story}\n\nThe Stalker caught up with you. Game Over.`;
-            break;
-          case 'victory':
-            data.story = `${data.story}\n\nYou defeated The Stalker! Victory!`;
-            break;
-          case 'survived':
-            data.story = `${data.story}\n\nYou survived until dawn! Victory!`;
-            break;
-          case 'escaped':
-            data.story = `${data.story}\n\nYou found a way to escape! Victory!`;
-            break;
-        }
-      }
-      
-      // Update story segment with complete data
-      setStorySegment(data);
-      
-      // Update game state while preserving critical values
-      setGameState(prevState => ({
-        ...data.gameState,
-        survivalScore: prevState.survivalScore,
-        tension: Math.min(10, prevState.tension),
-        progress: {
-          ...prevState.progress,
-          currentTurn: prevState.progress.currentTurn,
-          timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
-        }
-      }));
-      
-      // Add response to message history
-      setMessages(prevMessages => [...prevMessages, {
-        role: 'assistant',
-        content: JSON.stringify(data)
-      }]);
 
     } catch (error) {
       console.error('Error fetching story segment:', error);
