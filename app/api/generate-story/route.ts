@@ -22,11 +22,20 @@ interface StoryResponse {
 }
 
 function validateChoices(choices: Choice[]): Choice[] {
+  // Ensure we have at least one choice
+  if (!Array.isArray(choices) || choices.length === 0) {
+    throw new Error('No choices provided');
+  }
+
   return choices.map(choice => ({
     ...choice,
+    // Ensure DC is within bounds
     dc: Math.min(20, Math.max(1, choice.dc)),
+    // Ensure risk factor is within bounds
     riskFactor: Math.min(-5, Math.max(-30, choice.riskFactor)),
+    // Ensure reward value is within bounds
     rewardValue: Math.min(25, Math.max(5, choice.rewardValue)),
+    // Validate choice type
     type: ['combat', 'stealth', 'escape', 'search', 'interact'].includes(choice.type) ? 
       choice.type : 'search'
   }));
@@ -52,14 +61,6 @@ function generateFallbackResponse(): StoryResponse {
         rewardValue: 15,
         type: 'escape',
         logic: "High-risk escape attempt"
-      },
-      {
-        text: "Search for anything useful",
-        dc: 8,
-        riskFactor: -5,
-        rewardValue: 8,
-        type: 'search',
-        logic: "Low-risk search option"
       }
     ],
     gameState: initialState
@@ -97,14 +98,7 @@ ${gameState.progress.timeOfNight === 'dusk' ? '- Early game: Focus on exploratio
   gameState.progress.timeOfNight === 'midnight' ? '- Mid game: Increase danger and encounters' :
   gameState.progress.timeOfNight === 'lateNight' ? '- Late game: Peak danger and difficult choices' :
   gameState.progress.timeOfNight === 'nearDawn' ? '- Near end: Push towards final confrontation' :
-  '- Dawn: Final moments of survival'}
-
-Consider these conditions when setting DCs and risk factors. Remember:
-- Low survival score should encourage including some safer options
-- Higher stalker presence should increase DCs
-- Status effects should influence available choices
-- Equipment should unlock new possibilities
-- Always match risk factors and reward values to the DC level`;
+  '- Dawn: Final moments of survival'}`;
 
     const apiMessages: ChatCompletionMessageParam[] = [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -128,10 +122,6 @@ Consider these conditions when setting DCs and risk factors. Remember:
 
       if (!response.story || !Array.isArray(response.choices) || !response.gameState) {
         throw new Error('Invalid response structure');
-      }
-
-      if (response.choices.length !== 3) {
-        throw new Error('Invalid number of choices');
       }
 
       // Validate and adjust choices
