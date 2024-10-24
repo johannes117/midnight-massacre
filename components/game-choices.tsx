@@ -88,7 +88,7 @@ export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice,
               {choice.text}
             </span>
 
-            {choice.requirements && (
+            {(choice.requirements?.item || choice.requirements?.minSurvival) ? (
               <div className="w-full flex flex-wrap gap-2 mt-1">
                 {choice.requirements.item && (
                   <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 border border-purple-500/50">
@@ -101,7 +101,7 @@ export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice,
                   </span>
                 )}
               </div>
-            )}
+            ) : null}
           </Button>
         </motion.div>
       ))}
