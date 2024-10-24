@@ -58,15 +58,15 @@ export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice,
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
-          className="min-h-[4rem]"
+          className="min-h-[4rem] "
         >
           <Button
             onClick={() => handleChoice(choice)}
-            className="w-full h-full bg-black/40 hover:bg-black/60 
+            className="w-full min-h-[4rem] bg-black/40 hover:bg-black/60 
                      border border-orange-800/50 hover:border-orange-800 
                      text-orange-100 p-4 rounded-lg transition-all duration-300 
                      ease-in-out flex flex-col items-start gap-2 relative
-                     overflow-visible"
+                     overflow-visible whitespace-normal h-auto"
             disabled={isLoading}
           >
             <div className="w-full flex items-center justify-between flex-wrap gap-2">
@@ -84,7 +84,7 @@ export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice,
               </div>
             </div>
             
-            <span className="text-left text-sm sm:text-base font-medium leading-tight break-words w-full">
+            <span className="text-left text-sm sm:text-base font-medium leading-tight break-words whitespace-normal w-full">
               {choice.text}
             </span>
 

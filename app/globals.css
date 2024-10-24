@@ -119,7 +119,6 @@
   display: block;
   word-wrap: break-word;
   white-space: normal;
-  hyphens: auto;
   width: 100%;
 }
 
@@ -136,13 +135,19 @@
 }
 
 .choice-button {
-  white-space: normal;
-  height: auto;
-  text-align: left;
+  white-space: normal !important;
+  height: auto !important;
+  text-align: left !important;
 }
 
 @media (max-width: 640px) {
   .choice-button {
     font-size: 0.875rem;
   }
+}
+
+/* Adjust ScrollArea scrollbar position */
+/* Hide scrollbar while maintaining scroll functionality */
+[data-radix-scroll-area-viewport] + div {
+  display: none;
 }
