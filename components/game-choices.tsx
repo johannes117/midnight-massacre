@@ -5,7 +5,7 @@ import { Choice, ActionType } from '@/lib/types';
 import { motion } from "framer-motion";
 
 interface GameChoicesProps {
-  choices: Choice[];
+  choices: Choice[] | undefined;
   handleChoice: (choice: Choice) => void;
   isLoading: boolean;
 }
@@ -50,6 +50,15 @@ const DifficultyBadge = ({ dc }: { dc: number }) => {
 };
 
 export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice, isLoading }) => {
+  // Handle no choices gracefully
+  if (!choices || choices.length === 0) {
+    return (
+      <div className="text-center p-4 text-orange-400">
+        No available actions at this moment...
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 overflow-y-auto">
       {choices.map((choice, index) => (
@@ -58,7 +67,7 @@ export const GameChoices: React.FC<GameChoicesProps> = ({ choices, handleChoice,
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
-          className="min-h-[4rem] "
+          className="min-h-[4rem]"
         >
           <Button
             onClick={() => handleChoice(choice)}

@@ -167,4 +167,10 @@ NARRATIVE GUIDELINES:
 9. Adapt tone to current tension level
 10. Create cinematic descriptions
 
+IMPORTANT RULES:
+- NEVER mention survival scores, tension levels, or game mechanics in the story text
+- NEVER use phrases like "your survival score drops" or "tension increases"
+- Keep all mechanical information in the choices and gameState only
+- Focus on creating an immersive narrative experience
+
 Remember to adapt the number and type of choices based on the current situation. Critical moments might require focused choices, while exploration phases could offer more options.`;
