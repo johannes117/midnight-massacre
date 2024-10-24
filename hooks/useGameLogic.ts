@@ -55,6 +55,7 @@ export function useGameLogic() {
 
       let buffer = '';
       const decoder = new TextDecoder();
+      let validJSON = '';
       console.log('📖 Starting stream read loop...');
 
       while (true) {
@@ -65,90 +66,96 @@ export function useGameLogic() {
           break;
         }
 
-        // Decode the chunk and add it to our buffer
+        // Decode new chunk and add to buffer
         const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
         console.log('📝 Received chunk:', chunk);
-        console.log('📦 Current buffer:', buffer);
 
-        // Try to find complete JSON objects
+        // Look for complete JSON objects by finding matching braces
         try {
-          // Clean the buffer of any potential prefixes
-          const jsonStartIndex = buffer.indexOf('{');
-          if (jsonStartIndex > 0) {
-            console.log('🔍 Found JSON start at index:', jsonStartIndex);
-            buffer = buffer.slice(jsonStartIndex);
-          }
+          let openBraces = 0;
+          const startIndex = buffer.indexOf('{');
+          
+          if (startIndex !== -1) {
+            for (let i = startIndex; i < buffer.length; i++) {
+              if (buffer[i] === '{') openBraces++;
+              if (buffer[i] === '}') openBraces--;
+              
+              if (openBraces === 0) {
+                // We found a complete JSON object
+                validJSON = buffer.slice(startIndex, i + 1);
+                try {
+                  const data = JSON.parse(validJSON);
+                  if (data.story) {
+                    console.log('✨ Successfully parsed JSON chunk');
+                    setStorySegment(data);
+                    
+                    // Check game over conditions
+                    const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
+                    if (isOver) {
+                      console.log('🎮 Game over detected:', ending);
+                      setIsGameOver(true);
+                      switch (ending) {
+                        case 'death':
+                          data.story = `${data.story}\n\nYour survival score reached zero. Game Over.`;
+                          break;
+                        case 'caught':
+                          data.story = `${data.story}\n\nThe Stalker caught up with you. Game Over.`;
+                          break;
+                        case 'victory':
+                          data.story = `${data.story}\n\nYou defeated The Stalker! Victory!`;
+                          break;
+                        case 'survived':
+                          data.story = `${data.story}\n\nYou survived until dawn! Victory!`;
+                          break;
+                        case 'escaped':
+                          data.story = `${data.story}\n\nYou found a way to escape! Victory!`;
+                          break;
+                      }
+                      setStorySegment(data);
+                    }
 
-          const data = JSON.parse(buffer);
-          console.log('✨ Successfully parsed JSON:', data);
+                    // Update game state
+                    console.log('🎲 Updating game state...');
+                    setGameState(prevState => {
+                      const newState = {
+                        ...data.gameState,
+                        survivalScore: prevState.survivalScore,
+                        tension: Math.min(10, prevState.tension),
+                        progress: {
+                          ...prevState.progress,
+                          currentTurn: prevState.progress.currentTurn,
+                          timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
+                        }
+                      };
+                      console.log('🎲 New game state:', newState);
+                      return newState;
+                    });
 
-          if (data.story) {
-            console.log('📚 Updating story segment...');
-            setStorySegment(prevSegment => {
-              const newSegment = {
-                ...prevSegment,
-                ...data,
-              };
-              console.log('📖 New story segment:', newSegment);
-              return newSegment;
-            });
-
-            // Check game over conditions
-            const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
-            if (isOver) {
-              console.log('🎮 Game over detected:', ending);
-              setIsGameOver(true);
-              switch (ending) {
-                case 'death':
-                  data.story = `${data.story}\n\nYour survival score reached zero. Game Over.`;
-                  break;
-                case 'caught':
-                  data.story = `${data.story}\n\nThe Stalker caught up with you. Game Over.`;
-                  break;
-                case 'victory':
-                  data.story = `${data.story}\n\nYou defeated The Stalker! Victory!`;
-                  break;
-                case 'survived':
-                  data.story = `${data.story}\n\nYou survived until dawn! Victory!`;
-                  break;
-                case 'escaped':
-                  data.story = `${data.story}\n\nYou found a way to escape! Victory!`;
-                  break;
+                    // Update messages with properly typed role
+                    setMessages(prevMessages => {
+                      const newMessages: Message[] = [...prevMessages, {
+                        role: 'assistant',
+                        content: JSON.stringify(data)
+                      }];
+                      console.log('💬 Updated message history');
+                      return newMessages;
+                    });
+                  }
+                } catch {
+                  // Ignore parse errors for incomplete JSON
+                  console.log('⚠️ Incomplete JSON chunk, continuing...');
+                  continue;
+                }
+                
+                // Clear processed content from buffer
+                buffer = buffer.slice(startIndex + validJSON.length);
+                break;
               }
             }
-
-            // Update game state
-            console.log('🎲 Updating game state...');
-            setGameState(prevState => {
-              const newState = {
-                ...data.gameState,
-                survivalScore: prevState.survivalScore,
-                tension: Math.min(10, prevState.tension),
-                progress: {
-                  ...prevState.progress,
-                  currentTurn: prevState.progress.currentTurn,
-                  timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
-                }
-              };
-              console.log('🎲 New game state:', newState);
-              return newState;
-            });
-
-            // Add to message history
-            console.log('💬 Updating message history...');
-            setMessages(prevMessages => {
-              const newMessages: Message[] = [...prevMessages, {
-                role: 'assistant', // Ensure this is one of the allowed literals
-                content: JSON.stringify(data)
-              }];
-              console.log('💬 New messages:', newMessages);
-              return newMessages;
-            });
           }
         } catch (error) {
-          console.log('⚠️ Error parsing JSON (probably incomplete):', error);
-          // Incomplete JSON object, continue accumulating
+          console.log('⚠️ Error processing chunk:', error);
           continue;
         }
       }
@@ -179,7 +186,7 @@ export function useGameLogic() {
         gameState: currentGameStateRef.current
       };
       
-      console.log('⚡ Using fallback response:', fallbackResponse);
+      console.log('⚡ Using fallback response');
       setStorySegment(fallbackResponse);
     } finally {
       setIsLoading(false);
@@ -191,6 +198,8 @@ export function useGameLogic() {
 
   // Handle player choices
   const handleChoice = useCallback(async (choice: Choice) => {
+    console.log('🎯 Processing player choice:', choice);
+    
     // Resolve the action using game mechanics
     const { newGameState, outcomeText } = GameMechanics.resolveAction(choice, currentGameStateRef.current);
     
@@ -202,9 +211,9 @@ export function useGameLogic() {
     // Set action outcome for display
     setActionOutcome(outcomeText);
 
-    // Create new message from choice
-    const newMessage = {
-      role: 'user' as const,
+    // Create new message from choice with proper typing
+    const newMessage: Message = {
+      role: 'user',
       content: `Player chose: ${choice.text}\nOutcome: ${outcomeText}`
     };
 
@@ -221,6 +230,7 @@ export function useGameLogic() {
 
   // Game reset functionality
   const resetGame = useCallback(() => {
+    console.log('🔄 Resetting game...');
     // Reset all state to initial values
     const initialState = GameMechanics.getInitialGameState();
     setGameState(initialState);
@@ -249,6 +259,7 @@ export function useGameLogic() {
       const startGame = searchParams.get('start') === 'true';
       
       if (startGame) {
+        console.log('🎮 Starting new game...');
         const initialMessage: Message = { 
           role: 'user', 
           content: 'Start a new horror story where I wake up in a dark house, hearing strange noises outside.' 
@@ -258,7 +269,6 @@ export function useGameLogic() {
     }
   }, [fetchStorySegment]);
 
-  // Return all necessary state and functions
   return {
     storySegment,
     isLoading,
@@ -270,5 +280,4 @@ export function useGameLogic() {
   };
 }
 
-// Hook usage types for better TypeScript support
 export type UseGameLogicReturn = ReturnType<typeof useGameLogic>;
