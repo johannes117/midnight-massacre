@@ -21,27 +21,33 @@ export function useGameLogic() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [actionOutcome, setActionOutcome] = useState<string | null>(null);
   
-  // Add refs to control initialization
   const isInitialized = useRef(false);
   const initialFetchComplete = useRef(false);
+  // Add ref to track the current game state for accurate updates
+  const currentGameStateRef = useRef(gameState);
+
+  // Update ref when gameState changes
+  useEffect(() => {
+    currentGameStateRef.current = gameState;
+  }, [gameState]);
 
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
-    if (isLoading) return; // Prevent concurrent fetches
+    if (isLoading) return;
     setIsLoading(true);
     
     try {
+      // Use the current game state from ref for the API call
       const response = await fetch('/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: currentMessages,
-          gameState 
+          gameState: currentGameStateRef.current // Use ref instead of state
         }),
       });
   
       const data: StoryResponse = await response.json();
       
-      // Check game over conditions
       const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
       if (isOver) {
         setIsGameOver(true);
@@ -57,10 +63,15 @@ export function useGameLogic() {
       }
       
       setStorySegment(data);
+      
+      // Preserve critical game state values while updating with new data
       setGameState(prevState => ({
         ...data.gameState,
+        survivalScore: prevState.survivalScore, // Preserve current survival score
+        tension: prevState.tension, // Preserve current tension
         progress: {
           ...prevState.progress,
+          currentTurn: prevState.progress.currentTurn,
           timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
         }
       }));
@@ -71,6 +82,7 @@ export function useGameLogic() {
       }]);
     } catch (error) {
       console.error('Error fetching story segment:', error);
+      // Fallback maintains current game state values
       setStorySegment({
         story: 'The Stalker draws near... Perhaps we should try a different path?',
         choices: [
@@ -91,18 +103,43 @@ export function useGameLogic() {
             logic: "Safe search option"
           }
         ],
-        gameState: GameMechanics.getInitialGameState()
+        gameState: currentGameStateRef.current // Use current state for fallback
       });
     } finally {
       setIsLoading(false);
       setActionOutcome(null);
       initialFetchComplete.current = true;
     }
-  }, [gameState, isLoading]);
+  }, [isLoading]);
+
+  const handleChoice = useCallback(async (choice: Choice) => {
+    // Calculate new state based on the current state from ref
+    const { newGameState, outcomeText } = GameMechanics.resolveAction(choice, currentGameStateRef.current);
+    
+    // Update game state first
+    setGameState(newGameState);
+    // Update ref immediately to ensure latest state for next updates
+    currentGameStateRef.current = newGameState;
+    
+    setActionOutcome(outcomeText);
+
+    const newMessage = {
+      role: 'user' as const,
+      content: `Player chose: ${choice.text}\nOutcome: ${outcomeText}`
+    };
+
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
+    
+    // Small delay to ensure state updates are processed
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await fetchStorySegment(updatedMessages);
+  }, [messages, fetchStorySegment]);
 
   const resetGame = useCallback(() => {
     const initialState = GameMechanics.getInitialGameState();
     setGameState(initialState);
+    currentGameStateRef.current = initialState; // Update ref with initial state
     setMessages([]);
     setIsGameOver(false);
     setActionOutcome(null);
@@ -116,23 +153,6 @@ export function useGameLogic() {
     fetchStorySegment([initialMessage]);
   }, [fetchStorySegment]);
 
-  const handleChoice = useCallback(async (choice: Choice) => {
-    const { newGameState, outcomeText } = GameMechanics.resolveAction(choice, gameState);
-    
-    setGameState(newGameState);
-    setActionOutcome(outcomeText);
-
-    const newMessage = {
-      role: 'user' as const,
-      content: `Player chose: ${choice.text}\nOutcome: ${outcomeText}`
-    };
-
-    const updatedMessages = [...messages, newMessage];
-    setMessages(updatedMessages);
-    await fetchStorySegment(updatedMessages);
-  }, [gameState, messages, fetchStorySegment]);
-
-  // Single effect to handle initialization
   useEffect(() => {
     if (!isInitialized.current && !initialFetchComplete.current) {
       isInitialized.current = true;
