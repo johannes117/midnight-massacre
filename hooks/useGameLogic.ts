@@ -30,8 +30,10 @@ export function useGameLogic() {
   const fetchStorySegment = useCallback(async (currentMessages: Message[]) => {
     if (isLoading) return;
     setIsLoading(true);
+    console.log('🚀 Starting story generation...');
     
     try {
+      console.log('📤 Sending request with messages:', currentMessages);
       const response = await fetch('/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,6 +47,7 @@ export function useGameLogic() {
         throw new Error(`API request failed with status ${response.status}`);
       }
 
+      console.log('✅ Got response from API, starting stream reading...');
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('No reader available for streaming response');
@@ -52,36 +55,49 @@ export function useGameLogic() {
 
       let buffer = '';
       const decoder = new TextDecoder();
+      console.log('📖 Starting stream read loop...');
 
       while (true) {
         const { done, value } = await reader.read();
         
         if (done) {
+          console.log('🏁 Stream complete');
           break;
         }
 
         // Decode the chunk and add it to our buffer
-        buffer += decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        console.log('📝 Received chunk:', chunk);
+        console.log('📦 Current buffer:', buffer);
 
         // Try to find complete JSON objects
         try {
           // Clean the buffer of any potential prefixes
           const jsonStartIndex = buffer.indexOf('{');
           if (jsonStartIndex > 0) {
+            console.log('🔍 Found JSON start at index:', jsonStartIndex);
             buffer = buffer.slice(jsonStartIndex);
           }
 
           const data = JSON.parse(buffer);
+          console.log('✨ Successfully parsed JSON:', data);
+
           if (data.story) {
-            // Update story segment with the latest complete data
-            setStorySegment(prevSegment => ({
-              ...prevSegment,
-              ...data,
-            }));
+            console.log('📚 Updating story segment...');
+            setStorySegment(prevSegment => {
+              const newSegment = {
+                ...prevSegment,
+                ...data,
+              };
+              console.log('📖 New story segment:', newSegment);
+              return newSegment;
+            });
 
             // Check game over conditions
             const { isOver, ending } = GameMechanics.checkGameOver(data.gameState);
             if (isOver) {
+              console.log('🎮 Game over detected:', ending);
               setIsGameOver(true);
               switch (ending) {
                 case 'death':
@@ -103,31 +119,42 @@ export function useGameLogic() {
             }
 
             // Update game state
-            setGameState(prevState => ({
-              ...data.gameState,
-              survivalScore: prevState.survivalScore,
-              tension: Math.min(10, prevState.tension),
-              progress: {
-                ...prevState.progress,
-                currentTurn: prevState.progress.currentTurn,
-                timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
-              }
-            }));
+            console.log('🎲 Updating game state...');
+            setGameState(prevState => {
+              const newState = {
+                ...data.gameState,
+                survivalScore: prevState.survivalScore,
+                tension: Math.min(10, prevState.tension),
+                progress: {
+                  ...prevState.progress,
+                  currentTurn: prevState.progress.currentTurn,
+                  timeOfNight: GameMechanics.getTimeOfNight(prevState.progress.currentTurn)
+                }
+              };
+              console.log('🎲 New game state:', newState);
+              return newState;
+            });
 
             // Add to message history
-            setMessages(prevMessages => [...prevMessages, {
-              role: 'assistant',
-              content: JSON.stringify(data)
-            }]);
+            console.log('💬 Updating message history...');
+            setMessages(prevMessages => {
+              const newMessages: Message[] = [...prevMessages, {
+                role: 'assistant', // Ensure this is one of the allowed literals
+                content: JSON.stringify(data)
+              }];
+              console.log('💬 New messages:', newMessages);
+              return newMessages;
+            });
           }
-        } catch {
+        } catch (error) {
+          console.log('⚠️ Error parsing JSON (probably incomplete):', error);
           // Incomplete JSON object, continue accumulating
           continue;
         }
       }
 
     } catch (error) {
-      console.error('Error fetching story segment:', error);
+      console.error('❌ Error fetching story segment:', error);
       // Provide fallback response
       const fallbackResponse: StoryResponse = {
         story: 'The shadows grow longer... Perhaps we should try a different path?',
@@ -152,11 +179,13 @@ export function useGameLogic() {
         gameState: currentGameStateRef.current
       };
       
+      console.log('⚡ Using fallback response:', fallbackResponse);
       setStorySegment(fallbackResponse);
     } finally {
       setIsLoading(false);
       setActionOutcome(null);
       initialFetchComplete.current = true;
+      console.log('🏁 Story generation complete');
     }
   }, [isLoading]);
 

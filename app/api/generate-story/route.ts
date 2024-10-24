@@ -30,7 +30,10 @@ function isValidStoryResponse(response: unknown): response is StoryResponse {
 }
 
 export async function POST(req: Request) {
+  console.log('📮 Received POST request');
+  
   if (!process.env.OPENAI_API_KEY) {
+    console.error('❌ No OpenAI API key configured');
     return new Response(
       JSON.stringify({ error: 'OpenAI API key not configured' }),
       { status: 500 }
@@ -42,6 +45,8 @@ export async function POST(req: Request) {
       messages: { role: string; content: string }[];
       gameState: GameState;
     };
+    console.log('📝 Received messages:', messages);
+    console.log('🎲 Received game state:', gameState);
 
     const systemPrompt = `${SYSTEM_PROMPT}\n\nIMPORTANT: You must respond with a valid JSON object that includes 'story', 'choices', and 'gameState' fields. Your entire response must be parseable JSON.`;
 
@@ -54,8 +59,9 @@ export async function POST(req: Request) {
 - Tension: ${gameState.tension}/10
 - Encounters: ${gameState.encounterCount}`;
 
+    console.log('🤖 Calling OpenAI API...');
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4-turbo-preview',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'system', content: gameStatePrompt },
@@ -69,17 +75,24 @@ export async function POST(req: Request) {
       temperature: 0.8,
       max_tokens: 1000,
     });
+    console.log('✅ Got initial response from OpenAI');
 
     let buffer = '';
+    console.log('📦 Creating stream...');
 
     const stream = OpenAIStream(response, {
       onToken: (token) => {
+        console.log('🔤 Received token:', token);
         buffer += token;
       },
       async onCompletion() {
+        console.log('🏁 Stream complete. Final buffer:', buffer);
         try {
           const parsedResponse = JSON.parse(buffer);
+          console.log('✨ Parsed response:', parsedResponse);
+          
           if (isValidStoryResponse(parsedResponse)) {
+            console.log('✅ Response is valid');
             parsedResponse.gameState = {
               ...gameState,
               ...parsedResponse.gameState,
@@ -92,17 +105,21 @@ export async function POST(req: Request) {
               }
             };
             buffer = JSON.stringify(parsedResponse);
+            console.log('🔄 Updated buffer with new game state');
+          } else {
+            console.warn('⚠️ Invalid response structure');
           }
         } catch (error) {
-          console.error('Error processing response:', error);
+          console.error('❌ Error processing response:', error);
         }
       },
     });
 
+    console.log('📤 Returning streaming response');
     return new StreamingTextResponse(stream);
     
   } catch (error) {
-    console.error('Error in story generation:', error);
+    console.error('❌ Error in story generation:', error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'An error occurred',
