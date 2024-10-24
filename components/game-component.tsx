@@ -250,14 +250,21 @@ export function GameComponent() {
         transition={{ duration: 0.3 }}
         className="flex flex-col"
       >
-        <CardContent className="flex flex-col p-4 overflow-hidden relative">
+        <CardContent className={`
+          flex flex-col p-4 overflow-hidden relative
+          ${isMobile ? 'h-[calc(100vh-8rem)]' : 'h-auto'}
+        `}>
           <div className="mb-4">
             <GameProgress gameState={gameState} />
           </div>
 
           <GameStatus gameState={gameState} actionOutcome={actionOutcome} />
           
-          <ScrollArea className="flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner border border-orange-800/50 min-h-[200px] max-h-[40vh]">
+          <ScrollArea className={`
+            flex-grow px-4 py-3 bg-black/30 rounded-lg shadow-inner 
+            border border-orange-800/50
+            ${isMobile ? 'h-[35vh]' : 'min-h-[200px] max-h-[40vh]'}
+          `}>
             {isLoading ? (
               <SpookyLoader />
             ) : (
@@ -278,7 +285,10 @@ export function GameComponent() {
           </ScrollArea>
 
           {!isLoading && storySegment && (
-            <div className="mt-4 min-h-[150px] max-h-[calc(40vh-2rem)] overflow-hidden">
+            <div className={`
+              mt-4 overflow-hidden
+              ${isMobile ? 'h-[35vh]' : 'min-h-[150px] max-h-[calc(40vh-2rem)]'}
+            `}>
               {isGameOver ? (
                 <GameOver 
                   isVictory={storySegment?.story.toLowerCase().includes('victory') || 
@@ -286,7 +296,7 @@ export function GameComponent() {
                   resetGame={resetGame}
                 />
               ) : (
-                <ScrollArea className="h-full pr-4">
+                <ScrollArea className="h-full">
                   <GameChoices 
                     choices={storySegment.choices}
                     handleChoice={handleChoice}
