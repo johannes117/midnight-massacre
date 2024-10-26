@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 - Tension: ${gameState.tension}/10`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'system', content: gameStatePrompt },
